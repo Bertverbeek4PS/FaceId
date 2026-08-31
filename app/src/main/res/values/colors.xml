@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Black / amber, the highest-contrast pairing that stays comfortable
-         for long use. Amber on black measures ~15:1 against WCAG. -->
+    <!-- Low-glare palette. Nothing here is a large light-emitting area: the
+         screen stays essentially black and only thin strokes and text glow.
+
+         The amber is deliberately desaturated and darkened from the usual
+         #FFC400. It still measures about 7:1 against black, which is well past
+         the 4.5:1 needed for body text and the 3:1 needed for large text, but
+         it emits far less light than full-brightness amber. -->
     <color name="black">#FF000000</color>
-    <color name="amber">#FFFFC400</color>
+    <color name="amber">#FFC9962B</color>
+    <color name="amber_dim">#FFA87F26</color>
+    <color name="button_face">#FF0C0C0C</color>
+    <color name="grey_dim">#FF6E6E6E</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="grey_dim">#FF9E9E9E</color>
-    <color name="button_face">#FF1C1C1C</color>
-    <color name="scrim">#CC000000</color>
+
+    <color name="icon_background">#FF101010</color>
 </resources>

@@ -1,19 +1,24 @@
 package nl.bert.faceid
 
 import android.Manifest
+import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.Bundle
+import android.speech.RecognizerIntent
+import android.text.InputType
 import android.util.Size
 import android.view.WindowManager
+import android.widget.EditText
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -26,6 +31,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.bert.faceid.databinding.ActivityMainBinding
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
@@ -44,8 +50,14 @@ class MainActivity : AppCompatActivity() {
         /** A face narrower than this fraction of the frame is too far away. */
         const val MIN_FACE_FRACTION = 0.16f
 
+        /** Enrolment is stricter: a bad reference photo poisons every match. */
+        const val ENROLL_MIN_FACE_FRACTION = 0.22f
+        const val ENROLL_PHOTOS = 3
+        const val ENROLL_GAP_MS = 900L
+
         const val PREFS = "faceid"
         const val KEY_SENSITIVITY = "sensitivity_level"
+        const val KEY_BRIGHTNESS = "brightness_level"
     }
 
     /** Thresholds paired with how they are announced. Index 1 is the default. */
@@ -55,6 +67,23 @@ class MainActivity : AppCompatActivity() {
         0.60f to R.string.sens_strict,
         0.65f to R.string.sens_very_strict
     )
+
+    /**
+     * Backlight levels, dimmest first. The palette alone is not enough for a
+     * light-sensitive user: the real fix is turning the backlight down, which
+     * an app is allowed to do for its own window.
+     *
+     * -1f hands control back to the phone's own brightness setting.
+     */
+    private val brightnessLevels = listOf(
+        0.02f to R.string.bright_1,
+        0.08f to R.string.bright_2,
+        0.25f to R.string.bright_3,
+        0.60f to R.string.bright_4,
+        -1f to R.string.bright_5
+    )
+
+    private enum class Mode { IDLE, LOOKING, ENROLLING }
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var speaker: Speaker
@@ -69,7 +98,7 @@ class MainActivity : AppCompatActivity() {
     private var embedder: FaceEmbedder? = null
     private var people: List<Person> = emptyList()
 
-    private var listening = false
+    private var mode = Mode.IDLE
     private var busy = false
     private var lastFrameAt = 0L
     private var lastResultSpoken = ""
@@ -77,7 +106,13 @@ class MainActivity : AppCompatActivity() {
     private var sensitivityIndex = 1
     private val threshold: Float get() = sensitivityLevels[sensitivityIndex].first
 
+    private var brightnessIndex = 0
+
     private val spokenAt = ConcurrentHashMap<String, Long>()
+
+    // Enrolment state
+    private val captured = mutableListOf<Bitmap>()
+    private var lastCaptureAt = 0L
 
     private val requestCamera = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -86,6 +121,15 @@ class MainActivity : AppCompatActivity() {
             setStatus(getString(R.string.status_no_camera))
             speaker.say(getString(R.string.status_no_camera), interrupt = true)
         }
+    }
+
+    private val speechLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val heard = result.data
+            ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            ?.firstOrNull()
+        if (heard.isNullOrBlank()) promptTypedName() else confirmName(heard)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,11 +141,16 @@ class MainActivity : AppCompatActivity() {
         speaker = Speaker(this)
         store = PeopleStore(this)
 
-        sensitivityIndex = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getInt(KEY_SENSITIVITY, 1)
+        val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        sensitivityIndex = prefs.getInt(KEY_SENSITIVITY, 1)
             .coerceIn(sensitivityLevels.indices)
+        brightnessIndex = prefs.getInt(KEY_BRIGHTNESS, 0)
+            .coerceIn(brightnessLevels.indices)
+        applyBrightness()
 
-        binding.btnMain.setOnClickListener { toggleListening() }
+        binding.btnMain.setOnClickListener { onMainButton() }
+        binding.btnAdd.setOnClickListener { startEnrolment() }
+        binding.btnPeople.setOnClickListener { showPeopleDialog() }
         binding.btnReload.setOnClickListener {
             speaker.tapFeedback()
             reloadPeople()
@@ -112,6 +161,13 @@ class MainActivity : AppCompatActivity() {
         // ask someone to say it again.
         binding.tvResult.setOnClickListener {
             if (lastResultSpoken.isNotEmpty()) speaker.say(lastResultSpoken, interrupt = true)
+        }
+
+        // Press and hold anywhere on the big text to step the screen brightness.
+        // It is the largest target in the app, so it can be found without looking.
+        binding.tvResult.setOnLongClickListener {
+            cycleBrightness()
+            true
         }
 
         loadModelAndPeople()
@@ -140,10 +196,10 @@ class MainActivity : AppCompatActivity() {
                 setStatus(getString(R.string.status_no_model))
                 speaker.say(getString(R.string.status_no_model), interrupt = true)
                 binding.btnMain.isEnabled = false
+                binding.btnAdd.isEnabled = false
                 return@launch
             }
             embedder = loaded
-            binding.tvDetail.text = "model ${loaded.inputSize}px · ${loaded.dim}d"
             reloadPeople(firstRun = true)
         }
     }
@@ -159,19 +215,22 @@ class MainActivity : AppCompatActivity() {
             spokenAt.clear()
 
             val n = people.size
-            val message = when {
-                n == 0 -> getString(R.string.status_no_people)
-                n == 1 -> getString(R.string.status_ready_one)
-                else -> getString(R.string.status_ready, n)
-            }
-            setStatus(message)
-            val spoken = when {
-                n == 0 -> getString(R.string.say_reload_empty)
-                n == 1 -> getString(R.string.say_reload_done_one)
-                else -> getString(R.string.say_reload_done, n)
-            }
-            speaker.say(spoken, interrupt = true)
-            binding.tvDetail.text = "${store.photoCount()} photos · threshold ${"%.2f".format(threshold)}"
+            setStatus(
+                when {
+                    n == 0 -> getString(R.string.status_no_people)
+                    n == 1 -> getString(R.string.status_ready_one)
+                    else -> getString(R.string.status_ready, n)
+                }
+            )
+            speaker.say(
+                when {
+                    n == 0 -> getString(R.string.say_reload_empty)
+                    n == 1 -> getString(R.string.say_reload_done_one)
+                    else -> getString(R.string.say_reload_done, n)
+                },
+                interrupt = true
+            )
+            showDetail("${store.photoCount()} photos · threshold %.2f".format(threshold))
             binding.btnReload.isEnabled = true
         }
     }
@@ -180,10 +239,6 @@ class MainActivity : AppCompatActivity() {
         val providerFuture = ProcessCameraProvider.getInstance(this)
         providerFuture.addListener({
             val provider = providerFuture.get()
-
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(binding.preview.surfaceProvider)
-            }
 
             val analysis = ImageAnalysis.Builder()
                 .setResolutionSelector(
@@ -202,8 +257,11 @@ class MainActivity : AppCompatActivity() {
 
             try {
                 provider.unbindAll()
+                // Analysis only. No Preview use case: nothing is drawn to the
+                // screen, which removes the brightest thing in the app and
+                // saves battery at the same time.
                 provider.bindToLifecycle(
-                    this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis
+                    this, CameraSelector.DEFAULT_BACK_CAMERA, analysis
                 )
             } catch (e: Exception) {
                 setStatus(e.message ?: "Camera error")
@@ -213,17 +271,51 @@ class MainActivity : AppCompatActivity() {
 
     // ---- controls -------------------------------------------------------
 
-    private fun toggleListening() {
-        listening = !listening
+    private fun onMainButton() {
         speaker.tapFeedback()
+        if (mode == Mode.ENROLLING) {
+            cancelEnrolment()
+            return
+        }
+        mode = if (mode == Mode.LOOKING) Mode.IDLE else Mode.LOOKING
         spokenAt.clear()
-        binding.btnMain.text =
-            getString(if (listening) R.string.btn_stop else R.string.btn_start)
         val message = getString(
-            if (listening) R.string.status_looking else R.string.status_stopped
+            if (mode == Mode.LOOKING) R.string.status_looking else R.string.status_stopped
         )
+        refreshMainButton()
         setStatus(message)
         speaker.say(message, interrupt = true)
+    }
+
+    private fun refreshMainButton() {
+        binding.btnMain.text = getString(
+            when (mode) {
+                Mode.ENROLLING -> R.string.btn_cancel
+                Mode.LOOKING -> R.string.btn_stop
+                Mode.IDLE -> R.string.btn_start
+            }
+        )
+        val enrolling = mode == Mode.ENROLLING
+        binding.btnAdd.isEnabled = !enrolling
+        binding.btnPeople.isEnabled = !enrolling
+        binding.btnReload.isEnabled = !enrolling
+    }
+
+    private fun applyBrightness() {
+        val attributes = window.attributes
+        attributes.screenBrightness = brightnessLevels[brightnessIndex].first
+        window.attributes = attributes
+    }
+
+    private fun cycleBrightness() {
+        brightnessIndex = (brightnessIndex + 1) % brightnessLevels.size
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_BRIGHTNESS, brightnessIndex)
+            .apply()
+        applyBrightness()
+        speaker.tapFeedback()
+        speaker.say(getString(brightnessLevels[brightnessIndex].second), interrupt = true)
     }
 
     private fun cycleSensitivity() {
@@ -234,14 +326,204 @@ class MainActivity : AppCompatActivity() {
             .apply()
         speaker.tapFeedback()
         speaker.say(getString(sensitivityLevels[sensitivityIndex].second), interrupt = true)
-        binding.tvDetail.text = "threshold ${"%.2f".format(threshold)}"
+        showDetail("threshold %.2f".format(threshold))
+    }
+
+    // ---- enrolment ------------------------------------------------------
+
+    private fun startEnrolment() {
+        if (embedder == null) return
+        speaker.tapFeedback()
+        recycleCaptured()
+        lastCaptureAt = 0L
+        mode = Mode.ENROLLING
+        refreshMainButton()
+        setStatus(getString(R.string.enroll_hold))
+        speaker.say(getString(R.string.enroll_hold), interrupt = true)
+    }
+
+    private fun cancelEnrolment() {
+        mode = Mode.IDLE
+        recycleCaptured()
+        refreshMainButton()
+        setStatus(getString(R.string.enroll_cancelled))
+        speaker.say(getString(R.string.enroll_cancelled), interrupt = true)
+    }
+
+    private fun recycleCaptured() {
+        for (b in captured) if (!b.isRecycled) b.recycle()
+        captured.clear()
+    }
+
+    /** Called on the worker thread for each frame while enrolling. */
+    private suspend fun enrolFrame(bitmap: Bitmap) {
+        val faces = finder.detect(bitmap)
+        val face = FaceCrop.largest(faces)
+        if (face == null) {
+            bitmap.recycle()
+            announce(getString(R.string.say_no_face), GUIDE_REPEAT_MS, Feedback.NONE)
+            return
+        }
+
+        val box = face.boundingBox
+        if (box.width().toFloat() / bitmap.width < ENROLL_MIN_FACE_FRACTION) {
+            bitmap.recycle()
+            announce(getString(R.string.say_closer), GUIDE_REPEAT_MS, Feedback.NONE)
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        if (now - lastCaptureAt < ENROLL_GAP_MS) {
+            bitmap.recycle()
+            return
+        }
+        lastCaptureAt = now
+
+        // A generous crop: enough context for the detector to find the face
+        // again on reload, small enough that the JPEG stays tiny.
+        val crop = FaceCrop.crop(bitmap, box, margin = 0.45f)
+        bitmap.recycle()
+        if (crop == null) return
+
+        captured += crop
+        val n = captured.size
+
+        withContext(Dispatchers.Main) {
+            val message = getString(R.string.enroll_photo, n, ENROLL_PHOTOS)
+            setStatus(message)
+            speaker.recognisedFeedback()
+            speaker.say(message, interrupt = true)
+            if (n >= ENROLL_PHOTOS) {
+                mode = Mode.IDLE
+                refreshMainButton()
+                askForName()
+            }
+        }
+    }
+
+    /**
+     * Asks by voice, because typing a name is the least accessible part of this
+     * whole app. The system's own speech UI handles the microphone permission,
+     * and typing stays available as a fallback.
+     */
+    private fun askForName() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
+            putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.name_prompt))
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        }
+        try {
+            speechLauncher.launch(intent)
+        } catch (e: ActivityNotFoundException) {
+            promptTypedName()
+        }
+    }
+
+    private fun confirmName(heard: String) {
+        val clean = store.sanitiseName(heard)
+        if (clean.isEmpty()) {
+            promptTypedName()
+            return
+        }
+        val question = getString(R.string.name_confirm, clean)
+        speaker.say(question, interrupt = true)
+        AlertDialog.Builder(this)
+            .setTitle(question)
+            .setPositiveButton(R.string.name_save) { _, _ -> savePerson(clean) }
+            .setNeutralButton(R.string.name_again) { _, _ -> askForName() }
+            .setNegativeButton(R.string.name_type) { _, _ -> promptTypedName() }
+            .setOnCancelListener { recycleCaptured() }
+            .show()
+    }
+
+    private fun promptTypedName() {
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            textSize = 26f
+            hint = getString(R.string.name_type_title)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.name_type_title)
+            .setView(input)
+            .setPositiveButton(R.string.name_save) { _, _ ->
+                savePerson(store.sanitiseName(input.text.toString()))
+            }
+            .setNegativeButton(R.string.btn_cancel) { _, _ -> recycleCaptured() }
+            .setOnCancelListener { recycleCaptured() }
+            .show()
+    }
+
+    private fun savePerson(name: String) {
+        if (name.isEmpty() || captured.isEmpty()) {
+            speaker.say(getString(R.string.save_failed), interrupt = true)
+            recycleCaptured()
+            return
+        }
+        val photos = captured.toList()
+        captured.clear()
+
+        lifecycleScope.launch {
+            val written = withContext(Dispatchers.IO) { store.savePerson(name, photos) }
+            for (b in photos) if (!b.isRecycled) b.recycle()
+
+            if (written == 0) {
+                setStatus(getString(R.string.save_failed))
+                speaker.say(getString(R.string.save_failed), interrupt = true)
+                return@launch
+            }
+            val message = getString(R.string.saved_person, name, written)
+            setStatus(message)
+            speaker.say(message, interrupt = true)
+            reloadPeople(firstRun = true)
+        }
+    }
+
+    // ---- managing people ------------------------------------------------
+
+    private fun showPeopleDialog() {
+        speaker.tapFeedback()
+        val names = store.personNames()
+        if (names.isEmpty()) {
+            speaker.say(getString(R.string.people_empty), interrupt = true)
+            return
+        }
+        speaker.say(getString(R.string.people_title), interrupt = true)
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.people_title) + " (${names.size})")
+            .setItems(names.toTypedArray()) { _, which -> confirmDelete(names[which]) }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
+    }
+
+    private fun confirmDelete(name: String) {
+        val question = getString(R.string.delete_confirm, name)
+        speaker.say(question, interrupt = true)
+        AlertDialog.Builder(this)
+            .setTitle(question)
+            .setPositiveButton(R.string.delete_yes) { _, _ ->
+                lifecycleScope.launch {
+                    val ok = withContext(Dispatchers.IO) { store.deletePerson(name) }
+                    if (ok) {
+                        val message = getString(R.string.removed_person, name)
+                        setStatus(message)
+                        speaker.say(message, interrupt = true)
+                        reloadPeople(firstRun = true)
+                    }
+                }
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
     }
 
     // ---- recognition loop -----------------------------------------------
 
     private fun onFrame(proxy: ImageProxy) {
         val now = System.currentTimeMillis()
-        if (!listening || busy || now - lastFrameAt < FRAME_INTERVAL_MS || embedder == null) {
+        if (mode == Mode.IDLE || busy || now - lastFrameAt < FRAME_INTERVAL_MS || embedder == null) {
             proxy.close()
             return
         }
@@ -260,7 +542,12 @@ class MainActivity : AppCompatActivity() {
         busy = true
         work.launch {
             try {
-                process(upright(raw, rotation))
+                val upright = upright(raw, rotation)
+                when (mode) {
+                    Mode.ENROLLING -> enrolFrame(upright)
+                    Mode.LOOKING -> recognise(upright)
+                    Mode.IDLE -> upright.recycle()
+                }
             } catch (e: Exception) {
                 // A dropped frame is not worth telling the user about.
             } finally {
@@ -279,7 +566,7 @@ class MainActivity : AppCompatActivity() {
         return rotated
     }
 
-    private suspend fun process(bitmap: Bitmap) {
+    private suspend fun recognise(bitmap: Bitmap) {
         val e = embedder ?: return
 
         val faces = finder.detect(bitmap)
@@ -298,8 +585,7 @@ class MainActivity : AppCompatActivity() {
 
         // Aiming help: the camera is not where your eyes are, so tell the user
         // what the camera can actually see.
-        val relativeWidth = box.width().toFloat() / bitmap.width
-        if (relativeWidth < MIN_FACE_FRACTION) {
+        if (box.width().toFloat() / bitmap.width < MIN_FACE_FRACTION) {
             bitmap.recycle()
             announce(getString(R.string.say_closer), GUIDE_REPEAT_MS, Feedback.NONE)
             return
@@ -324,14 +610,16 @@ class MainActivity : AppCompatActivity() {
         if (people.isEmpty()) return
         val result = Matcher.match(vector, people, threshold)
 
-        withContext(Dispatchers.Main) {
-            binding.tvDetail.text = buildString {
+        showDetail(
+            buildString {
                 append("%.2f".format(result.score))
                 result.runnerUpName?.let {
-                    append("  ·  next: $it %.2f".format(result.runnerUpScore))
+                    append("  ·  next: ")
+                    append(it)
+                    append(" %.2f".format(result.runnerUpScore))
                 }
             }
-        }
+        )
 
         if (result.recognised) {
             announce(result.name!!, NAME_REPEAT_MS, Feedback.RECOGNISED)
@@ -365,13 +653,18 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread { binding.tvResult.text = text }
     }
 
+    private fun showDetail(text: String) {
+        runOnUiThread { binding.tvDetail.text = text }
+    }
+
     // ---- teardown -------------------------------------------------------
 
     override fun onDestroy() {
         super.onDestroy()
-        listening = false
+        mode = Mode.IDLE
         work.cancel()
         cameraExecutor.shutdown()
+        recycleCaptured()
         finder.close()
         embedder?.close()
         speaker.shutdown()

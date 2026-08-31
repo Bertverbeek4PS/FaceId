@@ -30,4 +30,32 @@
     <string name="sens_normal">Sensitivity normal.</string>
     <string name="sens_strict">Sensitivity strict.</string>
     <string name="sens_very_strict">Sensitivity very strict. Only sure matches.</string>
+
+    <string name="btn_add">Add person</string>
+    <string name="btn_people">Manage people</string>
+    <string name="btn_cancel">Cancel</string>
+
+    <string name="enroll_hold">Hold still</string>
+    <string name="enroll_photo">Photo %1$d of %2$d</string>
+    <string name="enroll_cancelled">Cancelled</string>
+    <string name="name_prompt">Say the person\'s name</string>
+    <string name="name_confirm">Save as %1$s?</string>
+    <string name="name_save">Save</string>
+    <string name="name_again">Say again</string>
+    <string name="name_type">Type it</string>
+    <string name="name_type_title">Type the name</string>
+    <string name="saved_person">%1$s saved with %2$d photos</string>
+    <string name="save_failed">Could not save. No usable face.</string>
+
+    <string name="people_title">People</string>
+    <string name="people_empty">No people yet</string>
+    <string name="delete_confirm">Remove %1$s and all their photos?</string>
+    <string name="delete_yes">Remove</string>
+    <string name="removed_person">%1$s removed</string>
+
+    <string name="bright_1">Screen very dark</string>
+    <string name="bright_2">Screen dark</string>
+    <string name="bright_3">Screen medium</string>
+    <string name="bright_4">Screen bright</string>
+    <string name="bright_5">Screen follows the phone setting</string>
 </resources>

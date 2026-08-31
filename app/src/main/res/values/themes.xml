@@ -10,22 +10,29 @@
         <item name="android:navigationBarColor" tools:targetApi="21">@color/black</item>
     </style>
 
-    <style name="BigButton" parent="Widget.MaterialComponents.Button">
+    <!-- The main action used to be a solid amber slab. On a screen held close
+         to the face that is a lamp. It is now a near-black panel with a thick
+         amber edge: same size, same easy target, a fraction of the light. -->
+    <style name="BigButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
         <item name="android:textSize">30sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/black</item>
-        <item name="backgroundTint">@color/amber</item>
+        <item name="android:textColor">@color/amber</item>
+        <item name="backgroundTint">@color/button_face</item>
+        <item name="strokeColor">@color/amber</item>
+        <item name="strokeWidth">4dp</item>
         <item name="cornerRadius">18dp</item>
+        <item name="rippleColor">@color/amber_dim</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:letterSpacing">0.01</item>
     </style>
 
     <style name="SecondaryButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
-        <item name="android:textSize">22sp</item>
-        <item name="android:textColor">@color/amber</item>
-        <item name="strokeColor">@color/amber</item>
+        <item name="android:textSize">21sp</item>
+        <item name="android:textColor">@color/amber_dim</item>
+        <item name="backgroundTint">@color/button_face</item>
+        <item name="strokeColor">@color/amber_dim</item>
         <item name="strokeWidth">2dp</item>
         <item name="cornerRadius">14dp</item>
+        <item name="rippleColor">@color/amber_dim</item>
         <item name="android:textAllCaps">false</item>
     </style>
 

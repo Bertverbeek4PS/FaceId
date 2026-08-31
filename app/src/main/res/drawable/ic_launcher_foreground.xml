@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A face held inside a scanning reticle.
+
+  Drawn as strokes rather than solid shapes, for the same reason the app's
+  buttons are outlined: a solid block of amber is a bright spot on the home
+  screen. The silhouette is deliberately unusual — four detached corners around
+  a circle — so the icon can be found by shape alone, without reading a label
+  or resolving fine detail.
+
+  All artwork sits inside the 18..90 band, the region an adaptive icon is
+  guaranteed to show whatever mask the launcher applies.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Reticle: four corner brackets -->
+    <path
+        android:pathData="M24,38 L24,29 Q24,24 29,24 L38,24"
+        android:strokeColor="#C9962B"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M70,24 L79,24 Q84,24 84,29 L84,38"
+        android:strokeColor="#C9962B"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M84,66 L84,75 Q84,80 79,80 L70,80"
+        android:strokeColor="#C9962B"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M38,80 L29,80 Q24,80 24,75 L24,66"
+        android:strokeColor="#C9962B"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Head -->
+    <path
+        android:pathData="M37,52 A17,17 0 0 1 71,52 A17,17 0 0 1 37,52 Z"
+        android:strokeColor="#C9962B"
+        android:strokeWidth="4.5" />
+
+    <!-- Eyes -->
+    <path
+        android:pathData="M44.4,48 A2.6,2.6 0 0 1 49.6,48 A2.6,2.6 0 0 1 44.4,48 Z"
+        android:fillColor="#C9962B" />
+    <path
+        android:pathData="M58.4,48 A2.6,2.6 0 0 1 63.6,48 A2.6,2.6 0 0 1 58.4,48 Z"
+        android:fillColor="#C9962B" />
+
+    <!-- Mouth -->
+    <path
+        android:pathData="M46.5,58 Q54,65.5 61.5,58"
+        android:strokeColor="#C9962B"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+
+</vector>

@@ -30,4 +30,32 @@
     <string name="sens_normal">Gevoeligheid normaal.</string>
     <string name="sens_strict">Gevoeligheid streng.</string>
     <string name="sens_very_strict">Gevoeligheid zeer streng. Alleen zekere treffers.</string>
+
+    <string name="btn_add">Persoon toevoegen</string>
+    <string name="btn_people">Personen beheren</string>
+    <string name="btn_cancel">Annuleren</string>
+
+    <string name="enroll_hold">Blijf stilstaan</string>
+    <string name="enroll_photo">Foto %1$d van %2$d</string>
+    <string name="enroll_cancelled">Geannuleerd</string>
+    <string name="name_prompt">Zeg de naam van de persoon</string>
+    <string name="name_confirm">Opslaan als %1$s?</string>
+    <string name="name_save">Opslaan</string>
+    <string name="name_again">Opnieuw zeggen</string>
+    <string name="name_type">Typen</string>
+    <string name="name_type_title">Typ de naam</string>
+    <string name="saved_person">%1$s opgeslagen met %2$d foto\'s</string>
+    <string name="save_failed">Opslaan mislukt. Geen bruikbaar gezicht.</string>
+
+    <string name="people_title">Personen</string>
+    <string name="people_empty">Nog geen personen</string>
+    <string name="delete_confirm">%1$s en alle foto\'s verwijderen?</string>
+    <string name="delete_yes">Verwijderen</string>
+    <string name="removed_person">%1$s verwijderd</string>
+
+    <string name="bright_1">Scherm zeer donker</string>
+    <string name="bright_2">Scherm donker</string>
+    <string name="bright_3">Scherm gemiddeld</string>
+    <string name="bright_4">Scherm helder</string>
+    <string name="bright_5">Scherm volgt de telefooninstelling</string>
 </resources>

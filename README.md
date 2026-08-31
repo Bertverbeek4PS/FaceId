@@ -94,9 +94,36 @@ This is where accuracy is won or lost.
 | Control | What it does |
 |---|---|
 | **Start looking** | Begins scanning. Names are spoken as they are recognised |
-| Big text area | Tap to repeat the last thing said |
-| **Reload people** | Rescans the folders after you add or remove photos |
+| **Add person** | Takes 3 photos, then asks for the name by voice |
+| **Manage people** | Lists everyone; tap a name to remove them and their photos |
+| **Reload people** | Rescans the folders after adding photos over USB |
 | **Sensitivity** | Cycles relaxed → normal → strict → very strict, spoken aloud |
+| Big text area | Tap to repeat the last thing said. **Press and hold to change screen brightness** |
+
+### Brightness
+
+The screen starts at 2% backlight, and there is no camera preview and no solid
+block of colour anywhere — only thin amber strokes on black. Press and hold the
+big text area to step through very dark → dark → medium → bright → follow the
+phone's own setting. Each step is spoken, and the choice is remembered.
+
+If it is still too bright at the lowest step, Android's own *Extra dim*
+(Settings → Accessibility → Display) stacks on top of this.
+
+### Adding someone from inside the app
+
+1. Tap **Add person**.
+2. Point the camera at their face. It says "Hold still", then counts:
+   "Photo 1 of 3", "Photo 2 of 3", "Photo 3 of 3", roughly one per second.
+   Move slightly between them — a small change of angle is worth more than
+   three identical shots.
+3. The phone asks who it is. Say the name out loud.
+4. It reads the name back: "Save as Anna?" Confirm, or say it again, or type it.
+
+The photos land in that person's folder like any other, so app-added and
+USB-added people work identically. Adding the same person twice adds to their
+folder rather than replacing it — that is how you fix a person who is being
+missed: enrol them again in different light.
 
 Sounds and buzzes:
 

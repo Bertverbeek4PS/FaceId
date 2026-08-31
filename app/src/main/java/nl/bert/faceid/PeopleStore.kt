@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 
 data class Person(val name: String, val vectors: List<FloatArray>)
 
@@ -156,6 +157,63 @@ class PeopleStore(private val context: Context) {
         )
         if (rotated !== bitmap) bitmap.recycle()
         return rotated
+    }
+
+
+    // ---- adding and removing people from inside the app ----------------
+
+    /** Names currently on disk, whether or not they produced a usable face. */
+    fun personNames(): List<String> =
+        root.listFiles { f -> f.isDirectory }
+            ?.map { it.name }
+            ?.filter { it.isNotBlank() && !it.startsWith(".") }
+            ?.sorted() ?: emptyList()
+
+    /**
+     * Strips anything that cannot be a folder name. The folder name is also the
+     * spoken name, so this stays as close to what the user said as possible.
+     */
+    fun sanitiseName(raw: String): String =
+        raw.trim()
+            .replace(Regex("[/\\\\:*?\"<>|\\n\\r\\t]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .take(60)
+
+    /**
+     * Writes [faces] into this person's folder as JPEGs. If the person already
+     * exists the photos are added, which is how you improve a bad match: enrol
+     * the same person again in different light.
+     *
+     * Returns how many photos were written.
+     */
+    fun savePerson(name: String, faces: List<Bitmap>): Int {
+        val clean = sanitiseName(name)
+        if (clean.isEmpty() || faces.isEmpty()) return 0
+
+        val dir = File(root, clean)
+        if (!dir.exists() && !dir.mkdirs()) return 0
+
+        var written = 0
+        val stamp = System.currentTimeMillis()
+        for ((i, face) in faces.withIndex()) {
+            val file = File(dir, "cap_${stamp}_$i.jpg")
+            try {
+                FileOutputStream(file).use { out ->
+                    if (face.compress(Bitmap.CompressFormat.JPEG, 92, out)) written++
+                }
+            } catch (e: Exception) {
+                file.delete()
+            }
+        }
+        return written
+    }
+
+    /** Removes the person and every photo of them. */
+    fun deletePerson(name: String): Boolean {
+        val dir = File(root, name)
+        if (!dir.isDirectory) return false
+        return dir.deleteRecursively()
     }
 
     // ---- cache ----------------------------------------------------------

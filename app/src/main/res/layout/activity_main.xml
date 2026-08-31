@@ -4,24 +4,11 @@
     android:layout_height="match_parent"
     android:background="@color/black">
 
-    <androidx.camera.view.PreviewView
-        android:id="@+id/preview"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:importantForAccessibility="no" />
-
-    <!-- Dims the camera image so the amber text stays readable on top of it. -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/scrim"
-        android:importantForAccessibility="no" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="14dp">
 
         <TextView
             android:id="@+id/tvResult"
@@ -29,12 +16,13 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:gravity="center"
+            android:minHeight="120dp"
             android:textColor="@color/amber"
-            android:textSize="52sp"
+            android:textSize="46sp"
             android:textStyle="bold"
             android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="28sp"
-            android:autoSizeMaxTextSize="72sp"
+            android:autoSizeMinTextSize="26sp"
+            android:autoSizeMaxTextSize="60sp"
             android:accessibilityLiveRegion="polite"
             android:text="@string/status_loading" />
 
@@ -43,23 +31,50 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:paddingBottom="12dp"
+            android:paddingBottom="10dp"
             android:textColor="@color/grey_dim"
-            android:textSize="20sp"
+            android:textSize="18sp"
             android:importantForAccessibility="no"
             android:text="" />
 
+        <!-- One filled button only: whatever is amber-and-solid is the main
+             action, so it can be found by feel and by low-detail vision. -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnMain"
             style="@style/BigButton"
             android:layout_width="match_parent"
-            android:layout_height="150dp"
+            android:layout_height="132dp"
             android:text="@string/btn_start" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAdd"
+                style="@style/SecondaryButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="90dp"
+                android:layout_marginEnd="5dp"
+                android:text="@string/btn_add" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPeople"
+                style="@style/SecondaryButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="90dp"
+                android:layout_marginStart="5dp"
+                android:text="@string/btn_people" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
@@ -67,8 +82,8 @@
                 style="@style/SecondaryButton"
                 android:layout_width="0dp"
                 android:layout_weight="1"
-                android:layout_height="88dp"
-                android:layout_marginEnd="6dp"
+                android:layout_height="72dp"
+                android:layout_marginEnd="5dp"
                 android:text="@string/btn_reload" />
 
             <com.google.android.material.button.MaterialButton
@@ -76,8 +91,8 @@
                 style="@style/SecondaryButton"
                 android:layout_width="0dp"
                 android:layout_weight="1"
-                android:layout_height="88dp"
-                android:layout_marginStart="6dp"
+                android:layout_height="72dp"
+                android:layout_marginStart="5dp"
                 android:text="@string/btn_sensitivity" />
         </LinearLayout>
 
