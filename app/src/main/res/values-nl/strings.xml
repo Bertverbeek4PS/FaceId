@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wie Is Daar</string>
+
+    <string name="btn_start">Begin met kijken</string>
+    <string name="btn_stop">Stop met kijken</string>
+    <string name="btn_reload">Personen opnieuw laden</string>
+    <string name="btn_sensitivity">Gevoeligheid</string>
+
+    <string name="status_loading">Laden…</string>
+    <string name="status_ready_one">Klaar. 1 persoon bekend.</string>
+    <string name="status_ready">Klaar. %1$d personen bekend.</string>
+    <string name="status_no_people">Nog geen personen. Voeg fotomappen toe en laad opnieuw.</string>
+    <string name="status_looking">Aan het kijken…</string>
+    <string name="status_stopped">Gestopt.</string>
+    <string name="status_no_model">Modelbestand ontbreekt. Zet facenet.tflite in de assets-map.</string>
+    <string name="status_no_camera">Camerapermissie is nodig om gezichten te herkennen.</string>
+
+    <string name="say_no_face">Geen gezicht in beeld</string>
+    <string name="say_closer">Kom dichterbij</string>
+    <string name="say_left">Gezicht links van je</string>
+    <string name="say_right">Gezicht rechts van je</string>
+    <string name="say_unknown">Ik ken deze persoon niet</string>
+    <string name="say_reloading">Personen opnieuw laden</string>
+    <string name="say_reload_done_one">1 persoon bekend</string>
+    <string name="say_reload_done">%1$d personen bekend</string>
+    <string name="say_reload_empty">Geen foto\'s gevonden</string>
+
+    <string name="sens_relaxed">Gevoeligheid ruim. Gokt vaker.</string>
+    <string name="sens_normal">Gevoeligheid normaal.</string>
+    <string name="sens_strict">Gevoeligheid streng.</string>
+    <string name="sens_very_strict">Gevoeligheid zeer streng. Alleen zekere treffers.</string>
+</resources>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Who Is There</string>
+
+    <string name="btn_start">Start looking</string>
+    <string name="btn_stop">Stop looking</string>
+    <string name="btn_reload">Reload people</string>
+    <string name="btn_sensitivity">Sensitivity</string>
+
+    <string name="status_loading">Loading…</string>
+    <string name="status_ready_one">Ready. 1 person known.</string>
+    <string name="status_ready">Ready. %1$d people known.</string>
+    <string name="status_no_people">No people yet. Add photo folders, then reload.</string>
+    <string name="status_looking">Looking…</string>
+    <string name="status_stopped">Stopped.</string>
+    <string name="status_no_model">Model file missing. Put facenet.tflite in the assets folder.</string>
+    <string name="status_no_camera">Camera permission is needed to recognise faces.</string>
+
+    <string name="say_no_face">No face in view</string>
+    <string name="say_closer">Move closer</string>
+    <string name="say_left">Face to your left</string>
+    <string name="say_right">Face to your right</string>
+    <string name="say_unknown">I don\'t know this person</string>
+    <string name="say_reloading">Reloading people</string>
+    <string name="say_reload_done_one">1 person known</string>
+    <string name="say_reload_done">%1$d people known</string>
+    <string name="say_reload_empty">No photos found</string>
+
+    <string name="sens_relaxed">Sensitivity relaxed. Guesses more often.</string>
+    <string name="sens_normal">Sensitivity normal.</string>
+    <string name="sens_strict">Sensitivity strict.</string>
+    <string name="sens_very_strict">Sensitivity very strict. Only sure matches.</string>
+</resources>
