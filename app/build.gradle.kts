@@ -3,10 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// A committed keystore, so every build is signed with the same key and installs
-// as an update instead of being refused. Generated once by the
-// "Make signing keystore" workflow. If the file is absent the build still
-// works — it just falls back to a throwaway key, as before.
 val fixedKeystore = rootProject.file("keystore/debug.keystore")
 
 android {
@@ -28,8 +24,6 @@ android {
         applicationId = "nl.bert.faceid"
         minSdk = 26
         targetSdk = 34
-        // Rises with every CI build, so Android sees each APK as newer than
-        // the last and offers a clean update.
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = "1.0.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
     }
@@ -53,7 +47,6 @@ android {
         viewBinding = true
     }
 
-    // The .tflite model must stay uncompressed so it can be memory-mapped.
     androidResources {
         noCompress += "tflite"
     }
