@@ -14,5 +14,6 @@
     <color name="grey_dim">#FF6E6E6E</color>
     <color name="white">#FFFFFFFF</color>
 
+    <color name="dialog_bg">#FF0A0A0A</color>
     <color name="icon_background">#FF101010</color>
 </resources>

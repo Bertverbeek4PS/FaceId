@@ -4,22 +4,33 @@
     android:layout_height="match_parent"
     android:background="@color/black"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:padding="12dp">
 
-    <!-- Result: the top half of the screen, nothing competing with it. -->
-    <TextView
-        android:id="@+id/tvResult"
+    <!-- The camera, back but bounded. Full-screen it was the brightest thing in
+         the app; as a panel it shows what the lens sees without lighting up the
+         whole display. -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:minHeight="150dp"
+        android:importantForAccessibility="no" />
+
+    <TextView
+        android:id="@+id/tvResult"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
         android:gravity="center"
-        android:minHeight="110dp"
+        android:minHeight="84dp"
+        android:maxLines="3"
         android:textColor="@color/amber"
-        android:textSize="40sp"
+        android:textSize="34sp"
         android:textStyle="bold"
         android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="24sp"
-        android:autoSizeMaxTextSize="54sp"
+        android:autoSizeMinTextSize="20sp"
+        android:autoSizeMaxTextSize="44sp"
         android:accessibilityLiveRegion="polite"
         android:text="@string/status_loading" />
 
@@ -28,69 +39,69 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:paddingBottom="10dp"
+        android:paddingBottom="8dp"
         android:textColor="@color/grey_dim"
-        android:textSize="16sp"
+        android:textSize="15sp"
         android:importantForAccessibility="no"
         android:text="" />
 
-    <!-- The primary action never scrolls away: it stays in the same place so it
-         can be found by feel. -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnMain"
         style="@style/BigButton"
         android:layout_width="match_parent"
-        android:layout_height="104dp"
+        android:layout_height="96dp"
         android:text="@string/btn_start" />
 
-    <!-- Everything else is one scrolling column of equal, full-width rows.
-         Uniform shape and one item per line beats a grid when you are finding
-         buttons by position rather than by reading them. -->
-    <ScrollView
+    <!-- Options swipe sideways in a single row, so they take one line of screen
+         instead of four and the camera keeps the space. -->
+    <HorizontalScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:scrollbarStyle="outsideOverlay"
-        android:fadeScrollbars="false">
+        android:scrollbars="none"
+        android:clipToPadding="false">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnAdd"
                 style="@style/SecondaryButton"
-                android:layout_width="match_parent"
-                android:layout_height="62dp"
+                android:layout_width="wrap_content"
+                android:layout_height="60dp"
+                android:minWidth="160dp"
+                android:layout_marginEnd="8dp"
                 android:text="@string/btn_add" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPeople"
                 style="@style/SecondaryButton"
-                android:layout_width="match_parent"
-                android:layout_height="62dp"
-                android:layout_marginTop="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="60dp"
+                android:minWidth="160dp"
+                android:layout_marginEnd="8dp"
                 android:text="@string/btn_people" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnReload"
                 style="@style/SecondaryButton"
-                android:layout_width="match_parent"
-                android:layout_height="62dp"
-                android:layout_marginTop="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="60dp"
+                android:minWidth="160dp"
+                android:layout_marginEnd="8dp"
                 android:text="@string/btn_reload" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSensitivity"
                 style="@style/SecondaryButton"
-                android:layout_width="match_parent"
-                android:layout_height="62dp"
-                android:layout_marginTop="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="60dp"
+                android:minWidth="160dp"
                 android:text="@string/btn_sensitivity" />
 
         </LinearLayout>
-    </ScrollView>
+    </HorizontalScrollView>
 
 </LinearLayout>

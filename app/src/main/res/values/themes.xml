@@ -36,4 +36,25 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
+
+    <!-- Pop-ups default to Android's light theme, which is a white slab in the
+         middle of an otherwise black app. This matches them to the main
+         screen: black panel, amber text, amber buttons. -->
+    <style name="DarkDialog" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:colorBackground">@color/dialog_bg</item>
+        <item name="android:windowBackground">@color/dialog_bg</item>
+        <item name="android:colorAccent">@color/amber</item>
+        <item name="android:textColorPrimary">@color/amber</item>
+        <item name="android:textColorSecondary">@color/amber_dim</item>
+        <item name="android:textColorAlertDialogListItem">@color/amber</item>
+        <item name="android:textColorHint">@color/grey_dim</item>
+        <item name="android:buttonBarButtonStyle">@style/DarkDialogButton</item>
+    </style>
+
+    <style name="DarkDialogButton" parent="@android:style/Widget.Material.Button.Borderless">
+        <item name="android:textColor">@color/amber</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
 </resources>

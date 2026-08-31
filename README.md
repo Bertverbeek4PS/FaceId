@@ -100,10 +100,11 @@ This is where accuracy is won or lost.
 | **Sensitivity** | Cycles relaxed → normal → strict → very strict, spoken aloud |
 | Big text area | Tap to repeat the last thing said |
 
-### Brightness
+### Screen and glare
 
-The app leaves the phone's brightness alone. The screen is black with thin amber
-strokes and no camera preview, so there is little to glare. For anything more,
+The camera preview sits in a bounded panel at the top rather than filling the
+screen, everything else is black with thin amber strokes, and the pop-up dialogs
+match. The app does not touch the phone's brightness — for anything dimmer,
 Android's own **Extra dim** (Settings → Accessibility → Display) works over the
 whole phone and stays under your control.
 

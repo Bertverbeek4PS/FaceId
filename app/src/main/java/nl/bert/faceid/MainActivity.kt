@@ -19,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -222,6 +223,10 @@ class MainActivity : AppCompatActivity() {
         providerFuture.addListener({
             val provider = providerFuture.get()
 
+            val preview = Preview.Builder().build().also {
+                it.setSurfaceProvider(binding.preview.surfaceProvider)
+            }
+
             val analysis = ImageAnalysis.Builder()
                 .setResolutionSelector(
                     ResolutionSelector.Builder()
@@ -239,11 +244,8 @@ class MainActivity : AppCompatActivity() {
 
             try {
                 provider.unbindAll()
-                // Analysis only. No Preview use case: nothing is drawn to the
-                // screen, which removes the brightest thing in the app and
-                // saves battery at the same time.
                 provider.bindToLifecycle(
-                    this, CameraSelector.DEFAULT_BACK_CAMERA, analysis
+                    this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis
                 )
             } catch (e: Exception) {
                 setStatus(e.message ?: "Camera error")
@@ -412,7 +414,7 @@ class MainActivity : AppCompatActivity() {
         }
         val question = getString(R.string.name_confirm, clean)
         speaker.say(question, interrupt = true)
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.DarkDialog)
             .setTitle(question)
             .setPositiveButton(R.string.name_save) { _, _ -> savePerson(clean) }
             .setNeutralButton(R.string.name_again) { _, _ -> askForName() }
@@ -424,10 +426,13 @@ class MainActivity : AppCompatActivity() {
     private fun promptTypedName() {
         val input = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
-            textSize = 26f
+            textSize = 24f
             hint = getString(R.string.name_type_title)
+            setTextColor(ContextCompat.getColor(context, R.color.amber))
+            setHintTextColor(ContextCompat.getColor(context, R.color.grey_dim))
+            setPadding(48, 32, 48, 32)
         }
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.DarkDialog)
             .setTitle(R.string.name_type_title)
             .setView(input)
             .setPositiveButton(R.string.name_save) { _, _ ->
@@ -473,7 +478,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         speaker.say(getString(R.string.people_title), interrupt = true)
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.DarkDialog)
             .setTitle(getString(R.string.people_title) + " (${names.size})")
             .setItems(names.toTypedArray()) { _, which -> confirmDelete(names[which]) }
             .setNegativeButton(R.string.btn_cancel, null)
@@ -483,7 +488,7 @@ class MainActivity : AppCompatActivity() {
     private fun confirmDelete(name: String) {
         val question = getString(R.string.delete_confirm, name)
         speaker.say(question, interrupt = true)
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.DarkDialog)
             .setTitle(question)
             .setPositiveButton(R.string.delete_yes) { _, _ ->
                 lifecycleScope.launch {
