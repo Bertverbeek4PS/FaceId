@@ -1,101 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black">
+    android:background="@color/black"
+    android:orientation="vertical"
+    android:padding="14dp">
 
-    <LinearLayout
+    <!-- Result: the top half of the screen, nothing competing with it. -->
+    <TextView
+        android:id="@+id/tvResult"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="14dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:minHeight="110dp"
+        android:textColor="@color/amber"
+        android:textSize="40sp"
+        android:textStyle="bold"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="24sp"
+        android:autoSizeMaxTextSize="54sp"
+        android:accessibilityLiveRegion="polite"
+        android:text="@string/status_loading" />
 
-        <TextView
-            android:id="@+id/tvResult"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:minHeight="120dp"
-            android:textColor="@color/amber"
-            android:textSize="46sp"
-            android:textStyle="bold"
-            android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="26sp"
-            android:autoSizeMaxTextSize="60sp"
-            android:accessibilityLiveRegion="polite"
-            android:text="@string/status_loading" />
+    <TextView
+        android:id="@+id/tvDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingBottom="10dp"
+        android:textColor="@color/grey_dim"
+        android:textSize="16sp"
+        android:importantForAccessibility="no"
+        android:text="" />
 
-        <TextView
-            android:id="@+id/tvDetail"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:paddingBottom="10dp"
-            android:textColor="@color/grey_dim"
-            android:textSize="18sp"
-            android:importantForAccessibility="no"
-            android:text="" />
+    <!-- The primary action never scrolls away: it stays in the same place so it
+         can be found by feel. -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnMain"
+        style="@style/BigButton"
+        android:layout_width="match_parent"
+        android:layout_height="104dp"
+        android:text="@string/btn_start" />
 
-        <!-- One filled button only: whatever is amber-and-solid is the main
-             action, so it can be found by feel and by low-detail vision. -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnMain"
-            style="@style/BigButton"
-            android:layout_width="match_parent"
-            android:layout_height="132dp"
-            android:text="@string/btn_start" />
+    <!-- Everything else is one scrolling column of equal, full-width rows.
+         Uniform shape and one item per line beats a grid when you are finding
+         buttons by position rather than by reading them. -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="10dp"
+        android:scrollbarStyle="outsideOverlay"
+        android:fadeScrollbars="false">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnAdd"
                 style="@style/SecondaryButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="90dp"
-                android:layout_marginEnd="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="62dp"
                 android:text="@string/btn_add" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPeople"
                 style="@style/SecondaryButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="90dp"
-                android:layout_marginStart="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="62dp"
+                android:layout_marginTop="8dp"
                 android:text="@string/btn_people" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnReload"
                 style="@style/SecondaryButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="72dp"
-                android:layout_marginEnd="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="62dp"
+                android:layout_marginTop="8dp"
                 android:text="@string/btn_reload" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSensitivity"
                 style="@style/SecondaryButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="72dp"
-                android:layout_marginStart="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="62dp"
+                android:layout_marginTop="8dp"
                 android:text="@string/btn_sensitivity" />
+
         </LinearLayout>
+    </ScrollView>
 
-    </LinearLayout>
-
-</FrameLayout>
+</LinearLayout>

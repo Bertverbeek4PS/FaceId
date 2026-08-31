@@ -56,6 +56,18 @@ jobs:
         run: gradle assembleDebug --no-daemon --stacktrace
 
       # Download from the run's Artifacts section (arrives as a zip).
+      - name: Show signing key fingerprint
+        run: |
+          if [ -f keystore/debug.keystore ]; then
+            echo "Signed with the committed keystore:"
+            keytool -list -v -keystore keystore/debug.keystore \
+              -storepass android -alias androiddebugkey | grep -i "SHA256:" || true
+          else
+            echo "::warning::No keystore/debug.keystore found. This APK is signed"
+            echo "::warning::with a throwaway key and will NOT install over an"
+            echo "::warning::earlier build. Run the 'Make signing keystore' workflow."
+          fi
+
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:

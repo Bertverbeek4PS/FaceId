@@ -75,8 +75,8 @@ Then tap **Reload people**.
 
 This is where accuracy is won or lost.
 
-- **3 to 5 photos per person.** More helps, but with diminishing returns after
-  about five.
+- **5 photos per person**, which is what the in-app flow takes. More helps, but
+  with diminishing returns past about five.
 - **Vary them.** Different day, different light, glasses on and off, with and
   without a beard, indoors and outdoors. Five near-identical photos are worth
   about as much as one.
@@ -94,31 +94,36 @@ This is where accuracy is won or lost.
 | Control | What it does |
 |---|---|
 | **Start looking** | Begins scanning. Names are spoken as they are recognised |
-| **Add person** | Takes 3 photos, then asks for the name by voice |
+| **Add person** | Take 5 photos yourself, then say the name |
 | **Manage people** | Lists everyone; tap a name to remove them and their photos |
 | **Reload people** | Rescans the folders after adding photos over USB |
 | **Sensitivity** | Cycles relaxed → normal → strict → very strict, spoken aloud |
-| Big text area | Tap to repeat the last thing said. **Press and hold to change screen brightness** |
+| Big text area | Tap to repeat the last thing said |
 
 ### Brightness
 
-The screen starts at 2% backlight, and there is no camera preview and no solid
-block of colour anywhere — only thin amber strokes on black. Press and hold the
-big text area to step through very dark → dark → medium → bright → follow the
-phone's own setting. Each step is spoken, and the choice is remembered.
-
-If it is still too bright at the lowest step, Android's own *Extra dim*
-(Settings → Accessibility → Display) stacks on top of this.
+The app leaves the phone's brightness alone. The screen is black with thin amber
+strokes and no camera preview, so there is little to glare. For anything more,
+Android's own **Extra dim** (Settings → Accessibility → Display) works over the
+whole phone and stays under your control.
 
 ### Adding someone from inside the app
 
-1. Tap **Add person**.
-2. Point the camera at their face. It says "Hold still", then counts:
-   "Photo 1 of 3", "Photo 2 of 3", "Photo 3 of 3", roughly one per second.
-   Move slightly between them — a small change of angle is worth more than
-   three identical shots.
-3. The phone asks who it is. Say the name out loud.
-4. It reads the name back: "Save as Anna?" Confirm, or say it again, or type it.
+1. Tap **Add person**. The big button becomes the shutter.
+2. Aim at their face. The app tells you if it can see one — "come closer",
+   "no face in view".
+3. Press the big button to take each photo. It counts up: "Photo 1 of 5"
+   through "Photo 5 of 5". Move slightly between shots; a small change of
+   angle is worth more than five identical pictures.
+4. The phone asks who it is. Say the name out loud.
+5. It reads the name back: "Save as Anna?" Confirm, or say it again, or type it.
+
+Nothing is captured until you press the button. If you press while the camera
+cannot see a face properly, it waits for a good frame rather than saving a bad
+reference photo — a poor reference poisons every future match against that
+person.
+
+**Add person** turns into **Cancel** while you are enrolling.
 
 The photos land in that person's folder like any other, so app-added and
 USB-added people work identically. Adding the same person twice adds to their

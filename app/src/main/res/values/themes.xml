@@ -14,7 +14,7 @@
          to the face that is a lamp. It is now a near-black panel with a thick
          amber edge: same size, same easy target, a fraction of the light. -->
     <style name="BigButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
-        <item name="android:textSize">30sp</item>
+        <item name="android:textSize">22sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/amber</item>
         <item name="backgroundTint">@color/button_face</item>
@@ -26,7 +26,7 @@
     </style>
 
     <style name="SecondaryButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
-        <item name="android:textSize">21sp</item>
+        <item name="android:textSize">17sp</item>
         <item name="android:textColor">@color/amber_dim</item>
         <item name="backgroundTint">@color/button_face</item>
         <item name="strokeColor">@color/amber_dim</item>

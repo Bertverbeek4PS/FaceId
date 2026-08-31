@@ -3,16 +3,35 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// A committed keystore, so every build is signed with the same key and installs
+// as an update instead of being refused. Generated once by the
+// "Make signing keystore" workflow. If the file is absent the build still
+// works — it just falls back to a throwaway key, as before.
+val fixedKeystore = rootProject.file("keystore/debug.keystore")
+
 android {
     namespace = "nl.bert.faceid"
     compileSdk = 34
+
+    signingConfigs {
+        if (fixedKeystore.exists()) {
+            getByName("debug") {
+                storeFile = fixedKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "nl.bert.faceid"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // Rises with every CI build, so Android sees each APK as newer than
+        // the last and offers a clean update.
+        versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
+        versionName = "1.0.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
     }
 
     buildTypes {

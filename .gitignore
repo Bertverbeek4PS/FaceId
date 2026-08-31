@@ -8,3 +8,6 @@ captures/
 .externalNativeBuild/
 .cxx/
 app/src/main/assets/facenet.tflite
+
+# The signing keystore IS committed on purpose - see app/build.gradle.kts
+!keystore/debug.keystore

@@ -35,7 +35,7 @@
     <string name="btn_people">Personen beheren</string>
     <string name="btn_cancel">Annuleren</string>
 
-    <string name="enroll_hold">Blijf stilstaan</string>
+    <string name="enroll_hold">Richt op het gezicht en maak 5 foto&#8217;s</string>
     <string name="enroll_photo">Foto %1$d van %2$d</string>
     <string name="enroll_cancelled">Geannuleerd</string>
     <string name="name_prompt">Zeg de naam van de persoon</string>
@@ -53,9 +53,5 @@
     <string name="delete_yes">Verwijderen</string>
     <string name="removed_person">%1$s verwijderd</string>
 
-    <string name="bright_1">Scherm zeer donker</string>
-    <string name="bright_2">Scherm donker</string>
-    <string name="bright_3">Scherm gemiddeld</string>
-    <string name="bright_4">Scherm helder</string>
-    <string name="bright_5">Scherm volgt de telefooninstelling</string>
+    <string name="btn_take_photo">Foto %1$d van %2$d maken</string>
 </resources>

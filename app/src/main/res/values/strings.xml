@@ -35,7 +35,7 @@
     <string name="btn_people">Manage people</string>
     <string name="btn_cancel">Cancel</string>
 
-    <string name="enroll_hold">Hold still</string>
+    <string name="enroll_hold">Aim at the face, then take 5 photos</string>
     <string name="enroll_photo">Photo %1$d of %2$d</string>
     <string name="enroll_cancelled">Cancelled</string>
     <string name="name_prompt">Say the person\'s name</string>
@@ -53,9 +53,5 @@
     <string name="delete_yes">Remove</string>
     <string name="removed_person">%1$s removed</string>
 
-    <string name="bright_1">Screen very dark</string>
-    <string name="bright_2">Screen dark</string>
-    <string name="bright_3">Screen medium</string>
-    <string name="bright_4">Screen bright</string>
-    <string name="bright_5">Screen follows the phone setting</string>
+    <string name="btn_take_photo">Take photo %1$d of %2$d</string>
 </resources>

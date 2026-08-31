@@ -52,12 +52,10 @@ class MainActivity : AppCompatActivity() {
 
         /** Enrolment is stricter: a bad reference photo poisons every match. */
         const val ENROLL_MIN_FACE_FRACTION = 0.22f
-        const val ENROLL_PHOTOS = 3
-        const val ENROLL_GAP_MS = 900L
+        const val ENROLL_PHOTOS = 5
 
         const val PREFS = "faceid"
         const val KEY_SENSITIVITY = "sensitivity_level"
-        const val KEY_BRIGHTNESS = "brightness_level"
     }
 
     /** Thresholds paired with how they are announced. Index 1 is the default. */
@@ -68,20 +66,6 @@ class MainActivity : AppCompatActivity() {
         0.65f to R.string.sens_very_strict
     )
 
-    /**
-     * Backlight levels, dimmest first. The palette alone is not enough for a
-     * light-sensitive user: the real fix is turning the backlight down, which
-     * an app is allowed to do for its own window.
-     *
-     * -1f hands control back to the phone's own brightness setting.
-     */
-    private val brightnessLevels = listOf(
-        0.02f to R.string.bright_1,
-        0.08f to R.string.bright_2,
-        0.25f to R.string.bright_3,
-        0.60f to R.string.bright_4,
-        -1f to R.string.bright_5
-    )
 
     private enum class Mode { IDLE, LOOKING, ENROLLING }
 
@@ -106,13 +90,15 @@ class MainActivity : AppCompatActivity() {
     private var sensitivityIndex = 1
     private val threshold: Float get() = sensitivityLevels[sensitivityIndex].first
 
-    private var brightnessIndex = 0
 
     private val spokenAt = ConcurrentHashMap<String, Long>()
 
     // Enrolment state
     private val captured = mutableListOf<Bitmap>()
-    private var lastCaptureAt = 0L
+
+    /** Set by the shutter button; the next frame with a usable face is kept. */
+    @Volatile
+    private var captureRequested = false
 
     private val requestCamera = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -144,12 +130,11 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         sensitivityIndex = prefs.getInt(KEY_SENSITIVITY, 1)
             .coerceIn(sensitivityLevels.indices)
-        brightnessIndex = prefs.getInt(KEY_BRIGHTNESS, 0)
-            .coerceIn(brightnessLevels.indices)
-        applyBrightness()
 
         binding.btnMain.setOnClickListener { onMainButton() }
-        binding.btnAdd.setOnClickListener { startEnrolment() }
+        binding.btnAdd.setOnClickListener {
+            if (mode == Mode.ENROLLING) cancelEnrolment() else startEnrolment()
+        }
         binding.btnPeople.setOnClickListener { showPeopleDialog() }
         binding.btnReload.setOnClickListener {
             speaker.tapFeedback()
@@ -161,13 +146,6 @@ class MainActivity : AppCompatActivity() {
         // ask someone to say it again.
         binding.tvResult.setOnClickListener {
             if (lastResultSpoken.isNotEmpty()) speaker.say(lastResultSpoken, interrupt = true)
-        }
-
-        // Press and hold anywhere on the big text to step the screen brightness.
-        // It is the largest target in the app, so it can be found without looking.
-        binding.tvResult.setOnLongClickListener {
-            cycleBrightness()
-            true
         }
 
         loadModelAndPeople()
@@ -222,14 +200,18 @@ class MainActivity : AppCompatActivity() {
                     else -> getString(R.string.status_ready, n)
                 }
             )
-            speaker.say(
-                when {
-                    n == 0 -> getString(R.string.say_reload_empty)
-                    n == 1 -> getString(R.string.say_reload_done_one)
-                    else -> getString(R.string.say_reload_done, n)
-                },
-                interrupt = true
-            )
+            // Only speak when the user asked for a reload. Announcing the
+            // headcount on every launch is noise.
+            if (!firstRun) {
+                speaker.say(
+                    when {
+                        n == 0 -> getString(R.string.say_reload_empty)
+                        n == 1 -> getString(R.string.say_reload_done_one)
+                        else -> getString(R.string.say_reload_done, n)
+                    },
+                    interrupt = true
+                )
+            }
             showDetail("${store.photoCount()} photos · threshold %.2f".format(threshold))
             binding.btnReload.isEnabled = true
         }
@@ -274,7 +256,10 @@ class MainActivity : AppCompatActivity() {
     private fun onMainButton() {
         speaker.tapFeedback()
         if (mode == Mode.ENROLLING) {
-            cancelEnrolment()
+            // The shutter. The next frame holding a usable face is kept, so a
+            // press while the camera is badly aimed waits rather than saving
+            // a bad reference photo.
+            captureRequested = true
             return
         }
         mode = if (mode == Mode.LOOKING) Mode.IDLE else Mode.LOOKING
@@ -288,34 +273,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshMainButton() {
-        binding.btnMain.text = getString(
-            when (mode) {
-                Mode.ENROLLING -> R.string.btn_cancel
-                Mode.LOOKING -> R.string.btn_stop
-                Mode.IDLE -> R.string.btn_start
-            }
-        )
         val enrolling = mode == Mode.ENROLLING
-        binding.btnAdd.isEnabled = !enrolling
+        binding.btnMain.text = when {
+            enrolling -> getString(
+                R.string.btn_take_photo,
+                (captured.size + 1).coerceAtMost(ENROLL_PHOTOS),
+                ENROLL_PHOTOS
+            )
+            mode == Mode.LOOKING -> getString(R.string.btn_stop)
+            else -> getString(R.string.btn_start)
+        }
+        binding.btnAdd.text =
+            getString(if (enrolling) R.string.btn_cancel else R.string.btn_add)
         binding.btnPeople.isEnabled = !enrolling
         binding.btnReload.isEnabled = !enrolling
-    }
-
-    private fun applyBrightness() {
-        val attributes = window.attributes
-        attributes.screenBrightness = brightnessLevels[brightnessIndex].first
-        window.attributes = attributes
-    }
-
-    private fun cycleBrightness() {
-        brightnessIndex = (brightnessIndex + 1) % brightnessLevels.size
-        getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_BRIGHTNESS, brightnessIndex)
-            .apply()
-        applyBrightness()
-        speaker.tapFeedback()
-        speaker.say(getString(brightnessLevels[brightnessIndex].second), interrupt = true)
+        binding.btnSensitivity.isEnabled = !enrolling
     }
 
     private fun cycleSensitivity() {
@@ -335,7 +307,7 @@ class MainActivity : AppCompatActivity() {
         if (embedder == null) return
         speaker.tapFeedback()
         recycleCaptured()
-        lastCaptureAt = 0L
+        captureRequested = false
         mode = Mode.ENROLLING
         refreshMainButton()
         setStatus(getString(R.string.enroll_hold))
@@ -344,6 +316,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun cancelEnrolment() {
         mode = Mode.IDLE
+        captureRequested = false
         recycleCaptured()
         refreshMainButton()
         setStatus(getString(R.string.enroll_cancelled))
@@ -355,10 +328,17 @@ class MainActivity : AppCompatActivity() {
         captured.clear()
     }
 
-    /** Called on the worker thread for each frame while enrolling. */
+    /**
+     * Called on the worker thread for each frame while enrolling.
+     *
+     * Frames are inspected continuously so the aiming help stays live, but a
+     * photo is only kept when the shutter has been pressed. Automatic capture
+     * meant the photo was taken before the user had finished aiming.
+     */
     private suspend fun enrolFrame(bitmap: Bitmap) {
         val faces = finder.detect(bitmap)
         val face = FaceCrop.largest(faces)
+
         if (face == null) {
             bitmap.recycle()
             announce(getString(R.string.say_no_face), GUIDE_REPEAT_MS, Feedback.NONE)
@@ -372,12 +352,11 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val now = System.currentTimeMillis()
-        if (now - lastCaptureAt < ENROLL_GAP_MS) {
+        if (!captureRequested) {
             bitmap.recycle()
             return
         }
-        lastCaptureAt = now
+        captureRequested = false
 
         // A generous crop: enough context for the detector to find the face
         // again on reload, small enough that the JPEG stays tiny.
@@ -397,6 +376,8 @@ class MainActivity : AppCompatActivity() {
                 mode = Mode.IDLE
                 refreshMainButton()
                 askForName()
+            } else {
+                refreshMainButton()
             }
         }
     }
