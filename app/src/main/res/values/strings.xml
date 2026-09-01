@@ -14,6 +14,13 @@
     <string name="glasses_failed">Could not connect to the glasses. Using the phone camera.</string>
     <string name="glasses_off">Using the phone camera</string>
 
+    <string name="btn_voice_off">Voice: Off</string>
+    <string name="btn_voice_on">Voice: On</string>
+    <string name="voice_listening">Listening. Say “who is this” or “take a picture”.</string>
+    <string name="voice_stopped">Voice commands off</string>
+    <string name="voice_unavailable">Voice commands are not available on this phone</string>
+    <string name="voice_no_permission">Microphone permission is needed for voice commands</string>
+
     <string name="status_loading">Loading…</string>
     <string name="status_ready_one">Ready. 1 person known.</string>
     <string name="status_ready">Ready. %1$d people known.</string>

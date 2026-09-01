@@ -107,6 +107,9 @@ class MainActivity : AppCompatActivity() {
     /** The Ray-Ban Meta camera, used instead of the phone camera when selected. */
     private val glasses = MetaGlassesCamera(work)
 
+    private lateinit var voice: VoiceCommander
+    private var voiceOn = false
+
     private var embedder: FaceEmbedder? = null
     private var people: List<Person> = emptyList()
 
@@ -156,6 +159,15 @@ class MainActivity : AppCompatActivity() {
         if (heard.isNullOrBlank()) promptTypedName() else confirmName(heard)
     }
 
+    private val requestMic = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) startVoice() else {
+            setStatus(getString(R.string.voice_no_permission))
+            speaker.say(getString(R.string.voice_no_permission), interrupt = true)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -164,6 +176,7 @@ class MainActivity : AppCompatActivity() {
 
         speaker = Speaker(this)
         store = PeopleStore(this)
+        voice = VoiceCommander(this) { command -> onVoiceCommand(command) }
 
         val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         sensitivityIndex = prefs.getInt(KEY_SENSITIVITY, 1)
@@ -180,12 +193,14 @@ class MainActivity : AppCompatActivity() {
         }
         binding.btnSensitivity.setOnClickListener { cycleSensitivity() }
         binding.btnCamera.setOnClickListener { toggleCamera() }
+        binding.btnVoice.setOnClickListener { toggleVoice() }
 
         // Glasses frames arrive already upright; feed them into the same pipeline
         // the phone camera uses.
         glasses.setFrameListener { bitmap -> submitFrame(bitmap) }
         glasses.setPreviewListener { bitmap -> showGlassesPreview(bitmap) }
         refreshCameraButton()
+        refreshVoiceButton()
 
         // Tapping the big text repeats the last thing said, so you never have to
         // ask someone to say it again.
@@ -439,6 +454,63 @@ class MainActivity : AppCompatActivity() {
         binding.glassesPreview.setImageDrawable(null)
         lastPreview?.recycle()
         lastPreview = null
+    }
+
+    // ---- voice commands -------------------------------------------------
+
+    private fun toggleVoice() {
+        speaker.tapFeedback()
+        if (voiceOn) {
+            voice.stop()
+            voiceOn = false
+            refreshVoiceButton()
+            setStatus(getString(R.string.voice_stopped))
+            speaker.say(getString(R.string.voice_stopped), interrupt = true)
+            return
+        }
+        if (!voice.isSupported) {
+            speaker.say(getString(R.string.voice_unavailable), interrupt = true)
+            return
+        }
+        if (voice.hasMicPermission) startVoice()
+        else requestMic.launch(Manifest.permission.RECORD_AUDIO)
+    }
+
+    private fun startVoice() {
+        if (!voice.start()) {
+            speaker.say(getString(R.string.voice_unavailable), interrupt = true)
+            return
+        }
+        voiceOn = true
+        refreshVoiceButton()
+        setStatus(getString(R.string.voice_listening))
+        speaker.say(getString(R.string.voice_listening), interrupt = true)
+    }
+
+    private fun refreshVoiceButton() {
+        binding.btnVoice.text = getString(
+            if (voiceOn) R.string.btn_voice_on else R.string.btn_voice_off
+        )
+    }
+
+    /** A spoken command arrives on the main thread from the recognizer. */
+    private fun onVoiceCommand(command: VoiceCommander.Command) {
+        when (command) {
+            VoiceCommander.Command.PHOTO ->
+                if (mode == Mode.ENROLLING) captureRequested = true else ensureLooking()
+            VoiceCommander.Command.WHO -> ensureLooking()
+        }
+    }
+
+    /** Starts looking if idle, and clears the cooldown so the next face is announced at once. */
+    private fun ensureLooking() {
+        if (mode == Mode.ENROLLING) return
+        if (mode == Mode.IDLE) {
+            mode = Mode.LOOKING
+            refreshMainButton()
+            setStatus(getString(R.string.status_looking))
+        }
+        spokenAt.clear()
     }
 
     /** Feeds one already-upright frame into the recognition/enrolment pipeline. */
@@ -845,6 +917,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         mode = Mode.IDLE
+        voice.stop()
         glassesLoop?.cancel()
         glasses.disconnect()
         lastPreview?.recycle()

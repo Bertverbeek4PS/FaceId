@@ -14,6 +14,13 @@
     <string name="glasses_failed">Kon geen verbinding maken met de bril. Telefooncamera in gebruik.</string>
     <string name="glasses_off">Telefooncamera in gebruik</string>
 
+    <string name="btn_voice_off">Stem: Uit</string>
+    <string name="btn_voice_on">Stem: Aan</string>
+    <string name="voice_listening">Aan het luisteren. Zeg “wie is dit” of “maak een foto”.</string>
+    <string name="voice_stopped">Spraakbediening uit</string>
+    <string name="voice_unavailable">Spraakbediening is niet beschikbaar op deze telefoon</string>
+    <string name="voice_no_permission">Microfoontoegang is nodig voor spraakbediening</string>
+
     <string name="status_loading">Laden…</string>
     <string name="status_ready_one">Klaar. 1 persoon bekend.</string>
     <string name="status_ready">Klaar. %1$d personen bekend.</string>
