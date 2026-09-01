@@ -68,6 +68,8 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        // The Meta Wearables SDK is built with a newer Kotlin; accept its metadata.
+        freeCompilerArgs = freeCompilerArgs + "-Xskip-metadata-version-check"
     }
 
     buildFeatures {
