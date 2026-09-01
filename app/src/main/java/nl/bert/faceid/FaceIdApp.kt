@@ -13,6 +13,20 @@ class FaceIdApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        Wearables.initialize(this)
+        // The glasses are optional; never let an SDK init failure take down the
+        // whole app before the phone-camera UI has even shown.
+        try {
+            Wearables.initialize(this)
+            glassesAvailable = true
+        } catch (t: Throwable) {
+            glassesAvailable = false
+        }
+    }
+
+    companion object {
+        /** True once the Meta Wearables SDK initialised without throwing. */
+        @Volatile
+        var glassesAvailable: Boolean = false
+            private set
     }
 }

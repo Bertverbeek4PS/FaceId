@@ -326,6 +326,12 @@ class MainActivity : AppCompatActivity() {
         if (useGlasses) {
             stopGlasses()
         } else {
+            // The glasses SDK never initialised, so there is nothing to connect to.
+            if (!FaceIdApp.glassesAvailable) {
+                setStatus(getString(R.string.glasses_failed))
+                speaker.say(getString(R.string.glasses_failed), interrupt = true)
+                return
+            }
             stopPhoneCamera()
             startGlasses()
         }
