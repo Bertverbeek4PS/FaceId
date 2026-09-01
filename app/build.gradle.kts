@@ -23,7 +23,7 @@ fun mwdatSecret(key: String, env: String): String =
 
 android {
     namespace = "nl.bert.faceid"
-    compileSdk = 34
+    compileSdk = 35
 
     signingConfigs {
         if (fixedKeystore.exists()) {
