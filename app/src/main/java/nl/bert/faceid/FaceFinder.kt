@@ -27,7 +27,7 @@ class FaceFinder {
             .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
             .setContourMode(FaceDetectorOptions.CONTOUR_MODE_NONE)
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
-            .setMinFaceSize(0.10f)
+            .setMinFaceSize(0.05f)
             .build()
     )
 

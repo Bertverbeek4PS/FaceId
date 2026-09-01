@@ -61,8 +61,9 @@ class MainActivity : AppCompatActivity() {
         const val GUIDE_REPEAT_MS = 3_500L
         const val NO_FACE_REPEAT_MS = 6_000L
 
-        /** A face narrower than this fraction of the frame is too far away. */
-        const val MIN_FACE_FRACTION = 0.16f
+        /** A face narrower than this fraction of the frame is too far away.
+         *  ~0.09 reaches roughly 3-4 m; raise it for closer-only, sharper matches. */
+        const val MIN_FACE_FRACTION = 0.09f
 
         /** Enrolment is stricter: a bad reference photo poisons every match. */
         const val ENROLL_MIN_FACE_FRACTION = 0.22f
@@ -292,7 +293,7 @@ class MainActivity : AppCompatActivity() {
                     ResolutionSelector.Builder()
                         .setResolutionStrategy(
                             ResolutionStrategy(
-                                Size(1280, 720),
+                                Size(1920, 1080),
                                 ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
                             )
                         )
