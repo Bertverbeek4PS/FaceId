@@ -1,107 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- weightSum splits the screen into exactly two equal halves: camera on top,
+     everything else below, regardless of how much content is in the bottom
+     half. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black"
     android:orientation="vertical"
+    android:weightSum="2"
     android:padding="12dp">
 
-    <!-- The camera, back but bounded. Full-screen it was the brightest thing in
-         the app; as a panel it shows what the lens sees without lighting up the
-         whole display. -->
     <androidx.camera.view.PreviewView
         android:id="@+id/preview"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:minHeight="150dp"
         android:importantForAccessibility="no" />
 
-    <TextView
-        android:id="@+id/tvResult"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:gravity="center"
-        android:minHeight="84dp"
-        android:maxLines="3"
-        android:textColor="@color/amber"
-        android:textSize="34sp"
-        android:textStyle="bold"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="20sp"
-        android:autoSizeMaxTextSize="44sp"
-        android:accessibilityLiveRegion="polite"
-        android:text="@string/status_loading" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/tvDetail"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:paddingBottom="8dp"
-        android:textColor="@color/grey_dim"
-        android:textSize="15sp"
-        android:importantForAccessibility="no"
-        android:text="" />
+        <TextView
+            android:id="@+id/tvResult"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:maxLines="3"
+            android:textColor="@color/amber"
+            android:textSize="34sp"
+            android:textStyle="bold"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="18sp"
+            android:autoSizeMaxTextSize="44sp"
+            android:accessibilityLiveRegion="polite"
+            android:text="@string/status_loading" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnMain"
-        style="@style/BigButton"
-        android:layout_width="match_parent"
-        android:layout_height="96dp"
-        android:text="@string/btn_start" />
-
-    <!-- Options swipe sideways in a single row, so they take one line of screen
-         instead of four and the camera keeps the space. -->
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:scrollbars="none"
-        android:clipToPadding="false">
-
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <TextView
+            android:id="@+id/tvDetail"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:gravity="center"
+            android:paddingBottom="8dp"
+            android:textColor="@color/grey_dim"
+            android:textSize="15sp"
+            android:importantForAccessibility="no"
+            android:text="" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAdd"
-                style="@style/SecondaryButton"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnMain"
+            style="@style/BigButton"
+            android:layout_width="match_parent"
+            android:layout_height="88dp"
+            android:text="@string/btn_start" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:scrollbars="none"
+            android:clipToPadding="false">
+
+            <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="60dp"
-                android:minWidth="160dp"
-                android:layout_marginEnd="8dp"
-                android:text="@string/btn_add" />
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPeople"
-                style="@style/SecondaryButton"
-                android:layout_width="wrap_content"
-                android:layout_height="60dp"
-                android:minWidth="160dp"
-                android:layout_marginEnd="8dp"
-                android:text="@string/btn_people" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAdd"
+                    style="@style/SecondaryButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="72dp"
+                    android:minWidth="160dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/btn_add" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnReload"
-                style="@style/SecondaryButton"
-                android:layout_width="wrap_content"
-                android:layout_height="60dp"
-                android:minWidth="160dp"
-                android:layout_marginEnd="8dp"
-                android:text="@string/btn_reload" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPeople"
+                    style="@style/SecondaryButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="72dp"
+                    android:minWidth="160dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/btn_people" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSensitivity"
-                style="@style/SecondaryButton"
-                android:layout_width="wrap_content"
-                android:layout_height="60dp"
-                android:minWidth="160dp"
-                android:text="@string/btn_sensitivity" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnReload"
+                    style="@style/SecondaryButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="72dp"
+                    android:minWidth="160dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/btn_reload" />
 
-        </LinearLayout>
-    </HorizontalScrollView>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSensitivity"
+                    style="@style/SecondaryButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="72dp"
+                    android:minWidth="160dp"
+                    android:text="@string/btn_sensitivity" />
+
+            </LinearLayout>
+        </HorizontalScrollView>
+
+    </LinearLayout>
 
 </LinearLayout>

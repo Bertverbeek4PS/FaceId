@@ -8,6 +8,12 @@
         <item name="android:windowBackground">@color/black</item>
         <item name="android:statusBarColor" tools:targetApi="21">@color/black</item>
         <item name="android:navigationBarColor" tools:targetApi="21">@color/black</item>
+        <!-- Theme.MaterialComponents (the light variant) defaults these to
+             white/near-black. A disabled MaterialButton blends colorSurface
+             underneath it, so leaving this unset is what let white leak
+             through on the disabled buttons. -->
+        <item name="colorSurface">@color/black</item>
+        <item name="colorOnSurface">@color/amber_dim</item>
     </style>
 
     <!-- The main action used to be a solid amber slab. On a screen held close
@@ -17,7 +23,7 @@
         <item name="android:textSize">22sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/amber</item>
-        <item name="backgroundTint">@color/button_face</item>
+        <item name="backgroundTint">@color/button_face_selector</item>
         <item name="strokeColor">@color/amber</item>
         <item name="strokeWidth">4dp</item>
         <item name="cornerRadius">18dp</item>
@@ -26,9 +32,9 @@
     </style>
 
     <style name="SecondaryButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
-        <item name="android:textSize">17sp</item>
+        <item name="android:textSize">18sp</item>
         <item name="android:textColor">@color/amber_dim</item>
-        <item name="backgroundTint">@color/button_face</item>
+        <item name="backgroundTint">@color/button_face_selector</item>
         <item name="strokeColor">@color/amber_dim</item>
         <item name="strokeWidth">2dp</item>
         <item name="cornerRadius">14dp</item>
