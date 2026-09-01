@@ -141,7 +141,7 @@ class MainActivity : AppCompatActivity() {
     private val glassesCameraPermission = registerForActivityResult(
         Wearables.RequestPermissionContract()
     ) { result ->
-        var status = PermissionStatus.Denied
+        var status: PermissionStatus = PermissionStatus.Denied
         result.onSuccess { status = it }
         permissionCont?.resume(status)
         permissionCont = null

@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import com.meta.wearable.dat.camera.Camera
 import com.meta.wearable.dat.camera.Stream
 import com.meta.wearable.dat.camera.addCamera
+import com.meta.wearable.dat.camera.types.PhotoData
 import com.meta.wearable.dat.camera.types.StreamConfiguration
 import com.meta.wearable.dat.camera.types.StreamState
 import com.meta.wearable.dat.camera.types.VideoFrame
@@ -126,8 +127,16 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
     override suspend fun capture() {
         val cam = camera ?: return
         cam.stream.capturePhoto().onSuccess { photo ->
-            val bytes = photo.data
-            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            // PhotoData is either a ready Bitmap or HEIC bytes to decode.
+            val bitmap = when (photo) {
+                is PhotoData.Bitmap -> photo.bitmap
+                is PhotoData.HEIC -> {
+                    val buffer = photo.data.duplicate().apply { rewind() }
+                    val bytes = ByteArray(buffer.remaining())
+                    buffer.get(bytes)
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                }
+            }
             if (bitmap != null) listener?.onFrame(bitmap)
         }
     }
