@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -8,6 +10,16 @@ plugins {
 // "Make signing keystore" workflow. If the file is absent the build still
 // works — it just falls back to a throwaway key, as before.
 val fixedKeystore = rootProject.file("keystore/debug.keystore")
+
+// Wearables Developer Center attestation values. Kept out of git: put them in
+// local.properties (mwdat_application_id / mwdat_client_token) or CI env vars.
+// They default to "0", which is what Developer Mode uses.
+val mwdatSecrets = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+fun mwdatSecret(key: String, env: String): String =
+    mwdatSecrets.getProperty(key) ?: System.getenv(env) ?: "0"
 
 android {
     namespace = "nl.bert.faceid"
@@ -26,12 +38,21 @@ android {
 
     defaultConfig {
         applicationId = "nl.bert.faceid"
-        minSdk = 26
+        // The Meta Wearables Device Access Toolkit requires Android 10 (API 29).
+        minSdk = 29
         targetSdk = 34
         // Rises with every CI build, so Android sees each APK as newer than
         // the last and offers a clean update.
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = "1.0.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
+
+        // Attestation identifiers from the Wearables Developer Center. In the
+        // Meta AI app's Developer Mode these stay "0"; a real project supplies
+        // them via local.properties or CI env vars.
+        manifestPlaceholders["mwdat_application_id"] =
+            mwdatSecret("mwdat_application_id", "MWDAT_APPLICATION_ID")
+        manifestPlaceholders["mwdat_client_token"] =
+            mwdatSecret("mwdat_client_token", "MWDAT_CLIENT_TOKEN")
     }
 
     buildTypes {
@@ -76,4 +97,10 @@ dependencies {
 
     implementation("com.google.mlkit:face-detection:16.1.7")
     implementation("org.tensorflow:tensorflow-lite:2.16.1")
+
+    // Meta Wearables Device Access Toolkit — Ray-Ban Meta camera access.
+    // Downloaded from GitHub Packages; see settings.gradle.kts for the token.
+    val mwdat = "0.9.0"
+    implementation("com.meta.wearable:mwdat-core:$mwdat")
+    implementation("com.meta.wearable:mwdat-camera:$mwdat")
 }

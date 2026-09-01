@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.text.InputType
 import android.util.Size
+import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,16 +26,28 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.meta.wearable.dat.core.Wearables
+import com.meta.wearable.dat.core.types.Permission
+import com.meta.wearable.dat.core.types.PermissionStatus
+import com.meta.wearable.dat.core.types.RegistrationState
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import nl.bert.faceid.databinding.ActivityMainBinding
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import kotlin.coroutines.resume
 
 class MainActivity : AppCompatActivity() {
 
@@ -57,6 +70,9 @@ class MainActivity : AppCompatActivity() {
 
         const val PREFS = "faceid"
         const val KEY_SENSITIVITY = "sensitivity_level"
+
+        /** Registration deeplinks through the Meta AI app, so allow the user time. */
+        const val REGISTRATION_TIMEOUT_MS = 120_000L
     }
 
     /** Thresholds paired with how they are announced. Index 1 is the default. */
@@ -76,9 +92,20 @@ class MainActivity : AppCompatActivity() {
     private val finder = FaceFinder()
     private val cameraExecutor = Executors.newSingleThreadExecutor()
 
+    private var cameraProvider: ProcessCameraProvider? = null
+    private var useGlasses = false
+    private var glassesLoop: Job? = null
+    private var permissionCont: CancellableContinuation<PermissionStatus>? = null
+
+    /** The most recent glasses preview frame, recycled once the next one replaces it. */
+    private var lastPreview: Bitmap? = null
+
     /** Own scope: onFrame runs on the camera thread, where touching
      *  lifecycleScope for the first time would not be safe. */
     private val work = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /** The Ray-Ban Meta camera, used instead of the phone camera when selected. */
+    private val glasses = MetaGlassesCamera(work)
 
     private var embedder: FaceEmbedder? = null
     private var people: List<Person> = emptyList()
@@ -108,6 +135,16 @@ class MainActivity : AppCompatActivity() {
             setStatus(getString(R.string.status_no_camera))
             speaker.say(getString(R.string.status_no_camera), interrupt = true)
         }
+    }
+
+    /** The glasses camera permission is brokered by the Meta AI app, not Android. */
+    private val glassesCameraPermission = registerForActivityResult(
+        Wearables.RequestPermissionContract()
+    ) { result ->
+        var status = PermissionStatus.Denied
+        result.onSuccess { status = it }
+        permissionCont?.resume(status)
+        permissionCont = null
     }
 
     private val speechLauncher = registerForActivityResult(
@@ -142,6 +179,13 @@ class MainActivity : AppCompatActivity() {
             reloadPeople()
         }
         binding.btnSensitivity.setOnClickListener { cycleSensitivity() }
+        binding.btnCamera.setOnClickListener { toggleCamera() }
+
+        // Glasses frames arrive already upright; feed them into the same pipeline
+        // the phone camera uses.
+        glasses.setFrameListener { bitmap -> submitFrame(bitmap) }
+        glasses.setPreviewListener { bitmap -> showGlassesPreview(bitmap) }
+        refreshCameraButton()
 
         // Tapping the big text repeats the last thing said, so you never have to
         // ask someone to say it again.
@@ -222,6 +266,7 @@ class MainActivity : AppCompatActivity() {
         val providerFuture = ProcessCameraProvider.getInstance(this)
         providerFuture.addListener({
             val provider = providerFuture.get()
+            cameraProvider = provider
 
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(binding.preview.surfaceProvider)
@@ -251,6 +296,171 @@ class MainActivity : AppCompatActivity() {
                 setStatus(e.message ?: "Camera error")
             }
         }, ContextCompat.getMainExecutor(this))
+    }
+
+    // ---- glasses camera -------------------------------------------------
+
+    private fun stopPhoneCamera() {
+        cameraProvider?.unbindAll()
+    }
+
+    private fun toggleCamera() {
+        if (mode == Mode.ENROLLING) return
+        speaker.tapFeedback()
+        if (useGlasses) {
+            stopGlasses()
+        } else {
+            stopPhoneCamera()
+            startGlasses()
+        }
+    }
+
+    /**
+     * Brings the glasses online: registers with the Meta AI app if needed, gets
+     * the camera permission it brokers, then opens a session and stream. Each
+     * step can round-trip through the Meta AI app, so this is one linear coroutine
+     * that falls back to the phone camera on any failure.
+     */
+    private fun startGlasses() {
+        binding.btnCamera.isEnabled = false
+        setStatus(getString(R.string.glasses_connecting))
+        speaker.say(getString(R.string.glasses_connecting), interrupt = true)
+
+        lifecycleScope.launch {
+            if (Wearables.registrationState.value != RegistrationState.REGISTERED) {
+                Wearables.startRegistration(this@MainActivity)
+                val registered = withTimeoutOrNull(REGISTRATION_TIMEOUT_MS) {
+                    Wearables.registrationState.first { it == RegistrationState.REGISTERED }
+                }
+                if (registered == null) {
+                    glassesFailed()
+                    return@launch
+                }
+            }
+
+            if (!ensureGlassesCameraPermission()) {
+                glassesFailed()
+                return@launch
+            }
+
+            if (!glasses.connect()) {
+                glassesFailed()
+                return@launch
+            }
+
+            useGlasses = true
+            binding.btnCamera.isEnabled = true
+            binding.glassesPreview.visibility = View.VISIBLE
+            refreshCameraButton()
+            setStatus(getString(R.string.glasses_ready))
+            speaker.say(getString(R.string.glasses_ready), interrupt = true)
+            startGlassesCaptureLoop()
+        }
+    }
+
+    private fun glassesFailed() {
+        useGlasses = false
+        binding.btnCamera.isEnabled = true
+        clearGlassesPreview()
+        refreshCameraButton()
+        setStatus(getString(R.string.glasses_failed))
+        speaker.say(getString(R.string.glasses_failed), interrupt = true)
+        startCamera()
+    }
+
+    private fun stopGlasses() {
+        glassesLoop?.cancel()
+        glassesLoop = null
+        glasses.disconnect()
+        useGlasses = false
+        clearGlassesPreview()
+        refreshCameraButton()
+        setStatus(getString(R.string.glasses_off))
+        speaker.say(getString(R.string.glasses_off), interrupt = true)
+        startCamera()
+    }
+
+    private suspend fun ensureGlassesCameraPermission(): Boolean {
+        var status: PermissionStatus? = null
+        Wearables.checkPermissionStatus(Permission.CAMERA).onSuccess { status = it }
+        if (status == PermissionStatus.Granted) return true
+        return requestGlassesPermission() == PermissionStatus.Granted
+    }
+
+    private suspend fun requestGlassesPermission(): PermissionStatus =
+        suspendCancellableCoroutine { cont ->
+            permissionCont = cont
+            cont.invokeOnCancellation { permissionCont = null }
+            glassesCameraPermission.launch(Permission.CAMERA)
+        }
+
+    /**
+     * Drives the glasses at the same cadence as the phone camera. A still is only
+     * requested when the pipeline is free, so slow Bluetooth captures apply their
+     * own backpressure rather than piling up.
+     */
+    private fun startGlassesCaptureLoop() {
+        glassesLoop?.cancel()
+        glassesLoop = work.launch {
+            while (isActive && useGlasses) {
+                if (mode != Mode.IDLE && !busy) {
+                    try {
+                        glasses.capture()
+                    } catch (e: Exception) {
+                        // A dropped frame is not worth surfacing.
+                    }
+                }
+                delay(FRAME_INTERVAL_MS)
+            }
+        }
+    }
+
+    private fun refreshCameraButton() {
+        binding.btnCamera.text = getString(
+            if (useGlasses) R.string.btn_camera_glasses else R.string.btn_camera_phone
+        )
+    }
+
+    /** Swaps in the newest raw preview frame and recycles the one it replaces. */
+    private fun showGlassesPreview(bitmap: Bitmap) {
+        runOnUiThread {
+            if (!useGlasses) {
+                bitmap.recycle()
+                return@runOnUiThread
+            }
+            binding.glassesPreview.setImageBitmap(bitmap)
+            lastPreview?.recycle()
+            lastPreview = bitmap
+        }
+    }
+
+    private fun clearGlassesPreview() {
+        binding.glassesPreview.visibility = View.GONE
+        binding.glassesPreview.setImageDrawable(null)
+        lastPreview?.recycle()
+        lastPreview = null
+    }
+
+    /** Feeds one already-upright frame into the recognition/enrolment pipeline. */
+    private fun submitFrame(upright: Bitmap) {
+        if (mode == Mode.IDLE || busy || embedder == null) {
+            upright.recycle()
+            return
+        }
+        busy = true
+        work.launch {
+            try {
+                when (mode) {
+                    Mode.ENROLLING -> enrolFrame(upright)
+                    Mode.LOOKING -> recognise(upright)
+                    Mode.IDLE -> upright.recycle()
+                }
+            } catch (e: Exception) {
+                // A dropped frame is not worth telling the user about.
+            } finally {
+                busy = false
+            }
+        }
     }
 
     // ---- controls -------------------------------------------------------
@@ -290,6 +500,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnPeople.isEnabled = !enrolling
         binding.btnReload.isEnabled = !enrolling
         binding.btnSensitivity.isEnabled = !enrolling
+        binding.btnCamera.isEnabled = !enrolling
     }
 
     private fun cycleSensitivity() {
@@ -525,21 +736,7 @@ class MainActivity : AppCompatActivity() {
         }
         if (raw == null) return
 
-        busy = true
-        work.launch {
-            try {
-                val upright = upright(raw, rotation)
-                when (mode) {
-                    Mode.ENROLLING -> enrolFrame(upright)
-                    Mode.LOOKING -> recognise(upright)
-                    Mode.IDLE -> upright.recycle()
-                }
-            } catch (e: Exception) {
-                // A dropped frame is not worth telling the user about.
-            } finally {
-                busy = false
-            }
-        }
+        submitFrame(upright(raw, rotation))
     }
 
     private fun upright(bitmap: Bitmap, degrees: Int): Bitmap {
@@ -648,6 +845,10 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         mode = Mode.IDLE
+        glassesLoop?.cancel()
+        glasses.disconnect()
+        lastPreview?.recycle()
+        lastPreview = null
         work.cancel()
         cameraExecutor.shutdown()
         recycleCaptured()

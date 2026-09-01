@@ -7,6 +7,13 @@
     <string name="btn_reload">Personen opnieuw laden</string>
     <string name="btn_sensitivity">Gevoeligheid</string>
 
+    <string name="btn_camera_phone">Camera: Telefoon</string>
+    <string name="btn_camera_glasses">Camera: Bril</string>
+    <string name="glasses_connecting">Verbinden met bril…</string>
+    <string name="glasses_ready">Bril-camera klaar</string>
+    <string name="glasses_failed">Kon geen verbinding maken met de bril. Telefooncamera in gebruik.</string>
+    <string name="glasses_off">Telefooncamera in gebruik</string>
+
     <string name="status_loading">Laden…</string>
     <string name="status_ready_one">Klaar. 1 persoon bekend.</string>
     <string name="status_ready">Klaar. %1$d personen bekend.</string>

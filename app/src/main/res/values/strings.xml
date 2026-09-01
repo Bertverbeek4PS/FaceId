@@ -7,6 +7,13 @@
     <string name="btn_reload">Reload people</string>
     <string name="btn_sensitivity">Sensitivity</string>
 
+    <string name="btn_camera_phone">Camera: Phone</string>
+    <string name="btn_camera_glasses">Camera: Glasses</string>
+    <string name="glasses_connecting">Connecting to glasses…</string>
+    <string name="glasses_ready">Glasses camera ready</string>
+    <string name="glasses_failed">Could not connect to the glasses. Using the phone camera.</string>
+    <string name="glasses_off">Using the phone camera</string>
+
     <string name="status_loading">Loading…</string>
     <string name="status_ready_one">Ready. 1 person known.</string>
     <string name="status_ready">Ready. %1$d people known.</string>

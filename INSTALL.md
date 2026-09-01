@@ -100,6 +100,106 @@ same release link a few minutes later. You never need a development machine.
 
 ---
 
+## Using the Ray-Ban Meta glasses camera
+
+The app can use your Meta glasses camera instead of the phone camera. Tap the
+**Camera: Phone / Camera: Glasses** button to switch. The phone camera stays as a
+fallback, so nothing breaks if the glasses are off or out of range.
+
+This uses Meta's Wearables Device Access Toolkit, which is a *developer preview*.
+That has three consequences worth knowing up front:
+
+- You can build and test on your own phone, but you cannot publish to the Play
+  Store yet.
+- The app now needs **Android 10 (or newer)** — the SDK's minimum.
+- Downloading the SDK needs a GitHub token (below). Without it the build fails
+  with an authentication error.
+
+### One-time setup on the glasses
+
+1. In the **Meta AI app**, pair and connect your glasses as normal.
+2. Enable **Developer Mode**: Settings → App Info → tap the App version five
+   times → toggle Developer Mode on.
+3. Make sure the Meta AI app and glasses firmware are current (the toolkit
+   needs recent versions).
+
+### The GitHub token for downloading the SDK
+
+The SDK is served from GitHub Packages, which always requires a token — even
+though the packages are public.
+
+1. On GitHub, go to **Settings → Developer settings → Personal access tokens →
+   Tokens (classic)** and create a token with **only** the `read:packages`
+   scope.
+2. For CI builds (the GitHub Actions route above), add the token as a repository
+   secret named **`MWDAT_GITHUB_TOKEN`** under
+   **Settings → Secrets and variables → Actions**. The build workflow already
+   reads it. The built-in Actions token cannot read another organisation's
+   packages, which is why a separate secret is needed.
+3. For local builds (Android Studio or `gradle` on your machine), create a file
+   named `local.properties` in the project root with:
+
+   ```properties
+   github_token=ghp_your_token_here
+   ```
+
+   This file is already git-ignored, so the token never gets committed.
+
+### First run with the glasses
+
+The first time you tap **Camera: Glasses**, the app asks the Meta AI app to
+register it and to grant camera access. Both prompts open the Meta AI app and
+return to this app automatically. After that, switching cameras is instant.
+
+If registration or the connection times out, the app says so and quietly falls
+back to the phone camera — just try again once the glasses are awake and nearby.
+
+### Using a real Application ID (Wearables Developer Center)
+
+Developer Mode (the steps above) is enough to test on your own phone with the
+`"0"` placeholders. You only need a real Application ID + Client Token when you
+want an attested build or to share the app with other testers. Here's the full
+path:
+
+1. **Organisation.** Your company should have exactly one Managed Meta Account
+   (MMA) organisation. Check with whoever manages it before creating a new one.
+   Sign in to the [Wearables Developer Center](https://wearables.developer.meta.com/);
+   first sign-in walks you through the MMA setup.
+2. **Create a project.** Dashboard → **New project** → give it a name and short
+   description.
+3. **Add the Android app.** In the project, open **Configuration** and add a
+   mobile app. Use this app's package name exactly: `nl.bert.faceid`.
+   (iOS and Android must be separate apps if you ever add iOS.)
+4. **Copy the credentials.** The Configuration page shows the **Application ID**
+   and **Client Token** for the Android app. These are what replace the `"0"`
+   placeholders.
+5. **Justify the camera permission.** Open the **Permissions** tab and write a
+   short justification for camera access (internal review only, not shown to
+   users).
+6. **Put the values in `local.properties`** (already git-ignored):
+
+   ```properties
+   github_token=ghp_your_token_here
+   mwdat_application_id=YOUR_APPLICATION_ID
+   mwdat_client_token=YOUR_CLIENT_TOKEN
+   ```
+
+   The build reads these automatically; leave them out and it stays on `"0"`
+   (Developer Mode). For CI builds, add them as the repository secrets
+   `MWDAT_APPLICATION_ID` and `MWDAT_CLIENT_TOKEN` and pass them into the build
+   step the same way the SDK token is passed.
+7. **Share with testers (optional).** Under **Distribute**, create a version,
+   wait for its build status to reach **Ready**, then create a **release
+   channel** and invite testers by their Meta account email. Testers still need
+   Developer Mode off but must accept the channel invite; you keep Developer Mode
+   on only for your own local builds.
+
+Two gotchas: in Developer Mode only **one** third-party app can be registered at
+a time, and the package name in the Developer Center must match `nl.bert.faceid`
+or attestation will refuse the connection.
+
+---
+
 ## If you'd rather not use GitHub
 
 Any of these work, in rough order of ease:

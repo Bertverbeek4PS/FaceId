@@ -1,43 +1,51 @@
 package nl.bert.faceid
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import com.meta.wearable.dat.camera.Camera
+import com.meta.wearable.dat.camera.Stream
+import com.meta.wearable.dat.camera.addCamera
+import com.meta.wearable.dat.camera.types.StreamConfiguration
+import com.meta.wearable.dat.camera.types.StreamState
+import com.meta.wearable.dat.camera.types.VideoFrame
+import com.meta.wearable.dat.camera.types.VideoQuality
+import com.meta.wearable.dat.core.Wearables
+import com.meta.wearable.dat.core.selectors.AutoDeviceSelector
+import com.meta.wearable.dat.core.session.DeviceSession
+import com.meta.wearable.dat.core.session.DeviceSessionState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * PHASE 2 — swapping the phone camera for the glasses camera.
+ * PHASE 2 — the glasses camera as a frame source.
  *
- * Everything above this file is finished and does not need to change. The whole
- * pipeline takes a Bitmap and does not care where it came from, so moving to the
- * Ray-Ban Meta camera means implementing exactly one thing: a source of frames.
+ * The whole recognition pipeline takes a Bitmap and does not care where it came
+ * from, so this file is the only thing that had to change to move off the phone
+ * camera. MainActivity keeps both sources and lets the user switch between them.
  *
- * WHAT YOU NEED FIRST
+ * WHAT YOU STILL NEED (one-time, outside the code)
  *   1. Meta AI app -> your glasses -> enable Developer Mode.
- *   2. Add the SDK from github.com/facebook/meta-wearables-dat-android
- *      to app/build.gradle.kts.
- *   3. Meta ships AI-ready docs and coding skills for exactly this SDK. Point
- *      Claude Code at them and at this file — that is far more reliable than
- *      guessing method names, because the toolkit is still in developer preview
- *      and the API surface moves between versions.
+ *   2. A GitHub personal access token (classic) with the read:packages scope,
+ *      placed in local.properties as github_token=... so Gradle can download the
+ *      SDK from GitHub Packages. See INSTALL.md.
  *
- * WHAT TO IMPLEMENT
- *   - connect(): discover the paired glasses, request the camera permission that
- *     the Meta AI app brokers, and open a session.
- *   - Photo capture, not video. Video over Bluetooth caps at 720p/30fps and
- *     burns battery; a single still on demand is sharper and cheaper, and face
- *     recognition only ever needs one good frame.
- *   - Deliver each captured frame to onFrame() as a Bitmap. MainActivity's
- *     process() function can then be called with it unchanged.
+ * HOW IT WORKS
+ *   - Registration and the camera permission are brokered by the Meta AI app and
+ *     handled in MainActivity (they need an Activity and the Activity Result API).
+ *   - connect() opens a device session and a low-resolution raw stream. A stream
+ *     must be live for photo capture to work at all.
+ *   - The raw video frames feed a live preview (setPreviewListener). They arrive
+ *     as uncompressed RGBA, so each one is a straight copy into a Bitmap — no HEVC
+ *     decoder needed.
+ *   - capture() takes a single sharper still for recognition and hands the decoded
+ *     Bitmap to the frame listener.
  *
- * WHAT TO CHANGE IN MainActivity
- *   - Replace startCamera() with glassesCamera.connect().
- *   - Replace the ImageAnalysis analyzer with the onFrame callback below.
- *   - Drop the CAMERA permission from the manifest: the phone camera is no
- *     longer used, and the glasses camera is permissioned through the Meta AI
- *     app instead.
- *
- * DISTRIBUTION NOTE
- *   Developer Preview lets you build and test but not publish. Installing your
- *   own build on your own phone is testing, so this is fine — but do not expect
- *   to put it on Play Store until Meta opens publishing.
+ * NOTE: the toolkit is a developer preview, so a few symbol or package names may
+ * shift between versions. If a name does not resolve, let Android Studio auto-import
+ * it, or check https://wearables.developer.meta.com/llms.txt?full=true.
  */
 interface GlassesCamera {
 
@@ -45,44 +53,124 @@ interface GlassesCamera {
         fun onFrame(bitmap: Bitmap)
     }
 
-    /** True once a session with the glasses is open. */
+    fun interface PreviewListener {
+        fun onPreview(bitmap: Bitmap)
+    }
+
+    /** True once a session and stream with the glasses are open. */
     val connected: Boolean
 
     suspend fun connect(): Boolean
 
-    /** Requests one photo. The result arrives on the registered listener. */
-    fun capture()
+    /** Requests one photo. The decoded frame arrives on the registered listener. */
+    suspend fun capture()
 
     fun setFrameListener(listener: FrameListener)
+
+    fun setPreviewListener(listener: PreviewListener)
 
     fun disconnect()
 }
 
 /**
- * Placeholder so the project compiles today. Replace the body of each method
- * with real Device Access Toolkit calls.
+ * Real Device Access Toolkit implementation. Registration and permission are
+ * assumed to be granted already (MainActivity handles those); this class only
+ * owns the session and stream lifecycle.
+ *
+ * [scope] outlives a single connection and drives the continuous preview frame
+ * collection; it is cancelled by the owner, not here.
  */
-class MetaGlassesCamera : GlassesCamera {
+class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
 
     private var listener: GlassesCamera.FrameListener? = null
+    private var previewListener: GlassesCamera.PreviewListener? = null
+    private var session: DeviceSession? = null
+    private var camera: Camera? = null
+    private var previewJob: Job? = null
 
-    override val connected: Boolean = false
+    @Volatile
+    override var connected: Boolean = false
+        private set
 
     override suspend fun connect(): Boolean {
-        // TODO: DAT session setup goes here.
-        return false
+        disconnect()
+
+        val newSession = Wearables.createSession(AutoDeviceSelector())
+            .getOrElse { return false }
+        session = newSession
+        newSession.start()
+
+        val started = withTimeoutOrNull(SETUP_TIMEOUT_MS) {
+            newSession.state.first { it == DeviceSessionState.STARTED }
+        }
+        if (started == null) return false
+
+        // LOW (360x640) at 15 fps: the sharpest per-frame quality over the
+        // Bluetooth link, and plenty for both preview and face recognition.
+        val cam = newSession.addCamera(
+            StreamConfiguration(videoQuality = VideoQuality.LOW, frameRate = 15)
+        ).getOrElse { return false }
+        camera = cam
+
+        cam.stream.start().getOrElse { return false }
+        val streaming = withTimeoutOrNull(SETUP_TIMEOUT_MS) {
+            cam.stream.state.first { it == StreamState.STREAMING }
+        }
+        if (streaming == null) return false
+
+        connected = true
+        startPreview(cam.stream)
+        return true
     }
 
-    override fun capture() {
-        // TODO: request a still from the glasses camera; hand the decoded
-        //       Bitmap to listener?.onFrame(bitmap).
+    override suspend fun capture() {
+        val cam = camera ?: return
+        cam.stream.capturePhoto().onSuccess { photo ->
+            val bytes = photo.data
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            if (bitmap != null) listener?.onFrame(bitmap)
+        }
     }
 
     override fun setFrameListener(listener: GlassesCamera.FrameListener) {
         this.listener = listener
     }
 
+    override fun setPreviewListener(listener: GlassesCamera.PreviewListener) {
+        this.previewListener = listener
+    }
+
     override fun disconnect() {
-        listener = null
+        connected = false
+        previewJob?.cancel()
+        previewJob = null
+        camera?.stop()
+        session?.stop()
+        camera = null
+        session = null
+    }
+
+    private fun startPreview(stream: Stream) {
+        previewJob?.cancel()
+        previewJob = scope.launch {
+            stream.videoStream.collect { frame ->
+                if (frame.isCompressed) return@collect
+                frame.toBitmap()?.let { previewListener?.onPreview(it) }
+            }
+        }
+    }
+
+    /** Raw frames are RGBA, so a preview Bitmap is a direct pixel copy. */
+    private fun VideoFrame.toBitmap(): Bitmap? = try {
+        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
+            buffer.rewind()
+            copyPixelsFromBuffer(buffer)
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    private companion object {
+        const val SETUP_TIMEOUT_MS = 30_000L
     }
 }

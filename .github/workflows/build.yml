@@ -52,7 +52,26 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      - name: Check DAT credentials are present
+        env:
+          MWDAT_APPLICATION_ID: ${{ secrets.MWDAT_APPLICATION_ID }}
+          MWDAT_CLIENT_TOKEN: ${{ secrets.MWDAT_CLIENT_TOKEN }}
+        run: |
+          # Print only lengths — the values are secrets and stay masked.
+          appLen=${#MWDAT_APPLICATION_ID}
+          tokLen=${#MWDAT_CLIENT_TOKEN}
+          if [ "$appLen" -gt 0 ]; then echo "Application ID: set ($appLen chars)"; else echo "::warning::Application ID not set — build falls back to Developer Mode (0)"; fi
+          if [ "$tokLen" -gt 0 ]; then echo "Client Token: set ($tokLen chars)"; else echo "::warning::Client Token not set — build falls back to Developer Mode (0)"; fi
+
       - name: Build debug APK
+        # The Meta Wearables SDK lives on GitHub Packages and needs a personal
+        # access token (classic) with read:packages. Add it as a repository
+        # secret named MWDAT_GITHUB_TOKEN (Settings -> Secrets and variables ->
+        # Actions). The built-in GITHUB_TOKEN cannot read another org's packages.
+        env:
+          GITHUB_TOKEN: ${{ secrets.MWDAT_GITHUB_TOKEN }}
+          MWDAT_APPLICATION_ID: ${{ secrets.MWDAT_APPLICATION_ID }}
+          MWDAT_CLIENT_TOKEN: ${{ secrets.MWDAT_CLIENT_TOKEN }}
         run: gradle assembleDebug --no-daemon --stacktrace
 
       # Download from the run's Artifacts section (arrives as a zip).
