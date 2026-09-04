@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
     private val requestCamera = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) startCamera() else {
+        if (granted) startDefaultExperience() else {
             setStatus(getString(R.string.status_no_camera))
             speaker.say(getString(R.string.status_no_camera), interrupt = true)
         }
@@ -214,7 +214,7 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED
         ) {
-            startCamera()
+            startDefaultExperience()
         } else {
             requestCamera.launch(Manifest.permission.CAMERA)
         }
@@ -275,6 +275,21 @@ class MainActivity : AppCompatActivity() {
             }
             showDetail("${store.photoCount()} photos · threshold %.2f".format(threshold))
             binding.btnReload.isEnabled = true
+        }
+    }
+
+    /** Starts the hands-free default: look, listen, and prefer the glasses camera. */
+    private fun startDefaultExperience() {
+        mode = Mode.LOOKING
+        refreshMainButton()
+        setStatus(getString(R.string.status_looking))
+
+        if (FaceIdApp.glassesAvailable) {
+            stopPhoneCamera()
+            startGlasses(autoStartVoice = true)
+        } else {
+            startCamera()
+            startVoiceOrRequest()
         }
     }
 
@@ -343,7 +358,7 @@ class MainActivity : AppCompatActivity() {
      * step can round-trip through the Meta AI app, so this is one linear coroutine
      * that falls back to the phone camera on any failure.
      */
-    private fun startGlasses() {
+    private fun startGlasses(autoStartVoice: Boolean = false) {
         binding.btnCamera.isEnabled = false
         setStatus(getString(R.string.glasses_connecting))
         speaker.say(getString(R.string.glasses_connecting), interrupt = true)
@@ -355,18 +370,18 @@ class MainActivity : AppCompatActivity() {
                     Wearables.registrationState.first { it == RegistrationState.REGISTERED }
                 }
                 if (registered == null) {
-                    glassesFailed()
+                    glassesFailed(autoStartVoice)
                     return@launch
                 }
             }
 
             if (!ensureGlassesCameraPermission()) {
-                glassesFailed()
+                glassesFailed(autoStartVoice)
                 return@launch
             }
 
             if (!glasses.connect()) {
-                glassesFailed()
+                glassesFailed(autoStartVoice)
                 return@launch
             }
 
@@ -377,10 +392,11 @@ class MainActivity : AppCompatActivity() {
             setStatus(getString(R.string.glasses_ready))
             speaker.say(getString(R.string.glasses_ready), interrupt = true)
             startGlassesCaptureLoop()
+            if (autoStartVoice) startVoiceOrRequest()
         }
     }
 
-    private fun glassesFailed() {
+    private fun glassesFailed(autoStartVoice: Boolean = false) {
         useGlasses = false
         binding.btnCamera.isEnabled = true
         clearGlassesPreview()
@@ -388,6 +404,7 @@ class MainActivity : AppCompatActivity() {
         setStatus(getString(R.string.glasses_failed))
         speaker.say(getString(R.string.glasses_failed), interrupt = true)
         startCamera()
+        if (autoStartVoice) startVoiceOrRequest()
     }
 
     private fun stopGlasses() {
@@ -465,6 +482,12 @@ class MainActivity : AppCompatActivity() {
 
     // ---- voice commands -------------------------------------------------
 
+    private fun startVoiceOrRequest() {
+        if (!voice.isSupported) return
+        if (voice.hasMicPermission) startVoice()
+        else requestMic.launch(Manifest.permission.RECORD_AUDIO)
+    }
+
     private fun toggleVoice() {
         speaker.tapFeedback()
         if (voiceOn) {
@@ -479,8 +502,7 @@ class MainActivity : AppCompatActivity() {
             speaker.say(getString(R.string.voice_unavailable), interrupt = true)
             return
         }
-        if (voice.hasMicPermission) startVoice()
-        else requestMic.launch(Manifest.permission.RECORD_AUDIO)
+        startVoiceOrRequest()
     }
 
     private fun startVoice() {

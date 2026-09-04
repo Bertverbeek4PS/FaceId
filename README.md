@@ -94,11 +94,18 @@ This is where accuracy is won or lost.
 | Control | What it does |
 |---|---|
 | **Start looking** | Begins scanning. Names are spoken as they are recognised |
+| **Start looking** | Begins scanning; the app also starts in this mode automatically |
 | **Add person** | Take 5 photos yourself, then say the name |
 | **Manage people** | Lists everyone; tap a name to remove them and their photos |
 | **Reload people** | Rescans the folders after adding photos over USB |
 | **Sensitivity** | Cycles relaxed → normal → strict → very strict, spoken aloud |
 | Big text area | Tap to repeat the last thing said |
+
+When the app opens, it automatically starts looking and listening. If the Ray-
+Ban Meta glasses are available, their camera is used first; the phone camera is
+used automatically if the glasses cannot connect. With the phone in your
+pocket, say **"Who is this?"** directly — no wake word is needed. The first
+launch may ask for camera and microphone permissions.
 
 ### Screen and glare
 
@@ -189,9 +196,10 @@ time, so adding one photo and reloading only processes that one photo.
 ## Phase 2: the glasses camera
 
 Right now this uses the phone camera. The pipeline takes a `Bitmap` and does not
-care where it came from, so switching to the Ray-Ban Meta camera means
-implementing one interface. `GlassesCamera.kt` has the interface, the setup
-steps, and notes on what to change in `MainActivity`.
+The app prefers the Ray-Ban Meta camera when it can connect and falls back to
+the phone camera. The pipeline takes a `Bitmap` and does not care where it came
+from, so both sources use the same recognition code. `GlassesCamera.kt` has the
+interface and setup notes.
 
 Short version: enable Developer Mode on the glasses in the Meta AI app, add
 `github.com/facebook/meta-wearables-dat-android`, capture stills rather than

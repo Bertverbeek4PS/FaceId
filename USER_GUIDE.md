@@ -28,6 +28,12 @@ your own phone; no photos are sent anywhere.
 2. Point the camera at a face. Hold fairly still.
 3. The app speaks the person's name when it recognises them.
 4. Press **Stop looking** when you are done.
+1. Open the app. It automatically starts looking and listening.
+2. Keep the phone in your pocket and say **"Who is this?"**. The app uses the
+  connected glasses camera first, and falls back to the phone camera if the
+  glasses cannot connect.
+3. The app speaks the person's name when it recognises them.
+4. Press **Stop looking** or **Voice: On** when you are done.
 
 If it says **"Move closer"** or **"No face in view"**, the camera cannot see a
 face well yet — get a bit closer or aim a little differently. It will guide you.
@@ -92,12 +98,15 @@ camera. Make sure the glasses are on, awake, and nearby, then try again.
 You can control the app by talking, without touching the phone.
 
 1. Press **Voice: Off** so it becomes **Voice: On**. The app starts listening
-   (through the glasses microphone when they are connected).
-2. Say a command, for example:
+The app starts listening automatically when it opens. On the first launch,
+allow microphone access when Android asks. It listens through the glasses
+microphone when they are connected.
+
+Say a command, for example:
    - **"Who is this?"** — the app looks and says who it sees.
    - **"Take a picture."** — while adding a person, this takes a photo; otherwise
      it looks and identifies.
-3. Press **Voice: On** again to stop listening.
+Press **Voice: On** to stop listening.
 
 Notes:
 - You do **not** say "Hey Meta" — that is Meta's own assistant. Just say the
