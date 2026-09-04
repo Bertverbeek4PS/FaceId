@@ -35,6 +35,12 @@ your own phone; no photos are sent anywhere.
 3. The app speaks the person's name when it recognises them.
 4. Press **Stop looking** or **Voice: On** when you are done.
 
+The app confirms a known person over two camera frames before speaking. Once it
+has said the name, it stays quiet while that person remains visible. It waits
+for four consistent unknown results before saying that someone is unknown, so
+one bad frame does not trigger an announcement. When a face has been gone for a
+few seconds, the next appearance is treated as new.
+
 If it says **"Move closer"** or **"No face in view"**, the camera cannot see a
 face well yet — get a bit closer or aim a little differently. It will guide you.
 

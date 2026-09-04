@@ -52,6 +52,8 @@ import kotlin.coroutines.resume
 class MainActivity : AppCompatActivity() {
 
     private companion object {
+        const val UNKNOWN_KEY = "unknown"
+
         /** ~3 frames a second is plenty and keeps the phone cool. */
         const val FRAME_INTERVAL_MS = 320L
 
@@ -60,6 +62,9 @@ class MainActivity : AppCompatActivity() {
         const val UNKNOWN_REPEAT_MS = 7_000L
         const val GUIDE_REPEAT_MS = 3_500L
         const val NO_FACE_REPEAT_MS = 6_000L
+        const val KNOWN_CONFIRMATIONS = 2
+        const val UNKNOWN_CONFIRMATIONS = 4
+        const val FACE_ABSENCE_RESET_MS = 2_500L
 
         /** A face narrower than this fraction of the frame is too far away.
          *  ~0.09 reaches roughly 3-4 m; raise it for closer-only, sharper matches. */
@@ -118,6 +123,10 @@ class MainActivity : AppCompatActivity() {
     private var busy = false
     private var lastFrameAt = 0L
     private var lastResultSpoken = ""
+    private var candidateRecognition = ""
+    private var candidateRecognitionCount = 0
+    private var announcedRecognition = ""
+    private var lastFaceSeenAt = 0L
 
     private var sensitivityIndex = 1
     private val threshold: Float get() = sensitivityLevels[sensitivityIndex].first
@@ -540,6 +549,7 @@ class MainActivity : AppCompatActivity() {
             setStatus(getString(R.string.status_looking))
         }
         spokenAt.clear()
+        resetRecognitionState()
     }
 
     /** Feeds one already-upright frame into the recognition/enrolment pipeline. */
@@ -577,6 +587,7 @@ class MainActivity : AppCompatActivity() {
         }
         mode = if (mode == Mode.LOOKING) Mode.IDLE else Mode.LOOKING
         spokenAt.clear()
+        resetRecognitionState()
         val message = getString(
             if (mode == Mode.LOOKING) R.string.status_looking else R.string.status_stopped
         )
@@ -856,9 +867,12 @@ class MainActivity : AppCompatActivity() {
         val faces = finder.detect(bitmap)
         if (faces.isEmpty()) {
             bitmap.recycle()
+            resetRecognitionStateIfAbsent()
             announce(getString(R.string.say_no_face), NO_FACE_REPEAT_MS, Feedback.NONE)
             return
         }
+
+        lastFaceSeenAt = System.currentTimeMillis()
 
         val face = FaceCrop.largest(faces)
         if (face == null) {
@@ -905,11 +919,40 @@ class MainActivity : AppCompatActivity() {
             }
         )
 
+        val recognitionKey = result.name ?: UNKNOWN_KEY
+        val requiredConfirmations =
+            if (result.recognised) KNOWN_CONFIRMATIONS else UNKNOWN_CONFIRMATIONS
+        if (recognitionKey == candidateRecognition) {
+            candidateRecognitionCount++
+        } else {
+            candidateRecognition = recognitionKey
+            candidateRecognitionCount = 1
+        }
+
+        if (candidateRecognitionCount < requiredConfirmations || announcedRecognition == recognitionKey) {
+            return
+        }
+
+        announcedRecognition = recognitionKey
         if (result.recognised) {
             announce(result.name!!, NAME_REPEAT_MS, Feedback.RECOGNISED)
         } else {
             announce(getString(R.string.say_unknown), UNKNOWN_REPEAT_MS, Feedback.UNKNOWN)
         }
+    }
+
+    private fun resetRecognitionStateIfAbsent() {
+        if (System.currentTimeMillis() - lastFaceSeenAt >= FACE_ABSENCE_RESET_MS) {
+            resetRecognitionState()
+        }
+    }
+
+    private fun resetRecognitionState() {
+        candidateRecognition = ""
+        candidateRecognitionCount = 0
+        announcedRecognition = ""
+        lastFaceSeenAt = 0L
+        spokenAt.clear()
     }
 
     private enum class Feedback { NONE, RECOGNISED, UNKNOWN }

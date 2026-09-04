@@ -148,7 +148,10 @@ The aiming help matters more than it sounds. The camera is not where your eyes
 are, so the app tells you what the camera can actually see.
 
 A name is not repeated within 9 seconds, so standing in front of someone does
-not produce a loop.
+not produce a loop. Recognition is also confirmed across multiple frames: known
+people need two matching results, while an unknown person needs four. After an
+announcement the app stays quiet until the face disappears for a few seconds or
+a different person is confirmed.
 
 ---
 
