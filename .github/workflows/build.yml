@@ -63,6 +63,18 @@ jobs:
           if [ "$appLen" -gt 0 ]; then echo "Application ID: set ($appLen chars)"; else echo "::warning::Application ID not set — build falls back to Developer Mode (0)"; fi
           if [ "$tokLen" -gt 0 ]; then echo "Client Token: set ($tokLen chars)"; else echo "::warning::Client Token not set — build falls back to Developer Mode (0)"; fi
 
+      - name: Print resolved Kotlin and coroutines versions
+        # Confirms which kotlin-stdlib (which provides SpillingKt) and coroutines
+        # actually land in the APK's runtime classpath.
+        env:
+          GITHUB_TOKEN: ${{ secrets.MWDAT_GITHUB_TOKEN }}
+        run: |
+          echo "== Kotlin Gradle plugin (buildEnvironment) =="
+          gradle -q buildEnvironment --no-daemon | grep -i "kotlin" || true
+          echo "== Runtime classpath kotlin/coroutines =="
+          gradle -q :app:dependencies --configuration debugRuntimeClasspath --no-daemon \
+            | grep -iE "kotlin-stdlib|kotlinx-coroutines" || true
+
       - name: Build debug APK
         # The Meta Wearables SDK lives on GitHub Packages and needs a personal
         # access token (classic) with read:packages. Add it as a repository
