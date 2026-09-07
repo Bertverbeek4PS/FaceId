@@ -105,7 +105,7 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
         lastError = null
 
         val newSession = Wearables.createSession(AutoDeviceSelector())
-            .getOrElse { err -> lastError = "Create session: ${err.description}"; return false }
+            .getOrElse { err -> lastError = "Create session: $err"; return false }
         session = newSession
         newSession.start()
 
@@ -122,10 +122,10 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
         // Bluetooth link, and plenty for both preview and face recognition.
         val cam = newSession.addCamera(
             StreamConfiguration(videoQuality = VideoQuality.LOW, frameRate = 15)
-        ).getOrElse { err -> lastError = "Add camera: ${err.description}"; return false }
+        ).getOrElse { err -> lastError = "Add camera: $err"; return false }
         camera = cam
 
-        cam.stream.start().getOrElse { err -> lastError = "Start stream: ${err.description}"; return false }
+        cam.stream.start().getOrElse { err -> lastError = "Start stream: $err"; return false }
         val streaming = withTimeoutOrNull(SETUP_TIMEOUT_MS) {
             cam.stream.state.first { it == StreamState.STREAMING }
         }
