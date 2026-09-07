@@ -16,6 +16,7 @@ import com.meta.wearable.dat.core.session.DeviceSession
 import com.meta.wearable.dat.core.session.DeviceSessionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -104,30 +105,43 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
         disconnect()
         lastError = null
 
-        val newSession = Wearables.createSession(AutoDeviceSelector())
-            .getOrElse { err -> lastError = "Create session: $err"; return false }
-        session = newSession
-        newSession.start()
-
-        // Record every state we see, so a failure can report where it stalled.
+        // A session started a moment before the glasses are ready just reads
+        // STOPPED and never recovers, so retry with a fresh session each time.
+        var newSession: DeviceSession? = null
         var lastState: DeviceSessionState? = null
-        val started = withTimeoutOrNull(SESSION_TIMEOUT_MS) {
-            newSession.state.first { st ->
-                lastState = st
-                st == DeviceSessionState.STARTED
+        var attempt = 0
+        while (attempt < CONNECT_ATTEMPTS) {
+            attempt++
+            val s = Wearables.createSession(AutoDeviceSelector())
+                .getOrElse { err -> lastError = "Create session: $err"; return false }
+            s.start()
+            val started = withTimeoutOrNull(ATTEMPT_TIMEOUT_MS) {
+                s.state.first { st ->
+                    lastState = st
+                    st == DeviceSessionState.STARTED
+                }
             }
+            if (started != null) {
+                newSession = s
+                break
+            }
+            s.stop()
+            if (attempt < CONNECT_ATTEMPTS) delay(RETRY_DELAY_MS)
         }
-        if (started == null) {
-            lastError = "Session did not start within ${SESSION_TIMEOUT_MS / 1000}s " +
-                "(last state: ${lastState ?: "none"}). " +
-                "Put the glasses ON and keep them awake — a session needs them worn. " +
-                "Also: phone Wi-Fi ON, glasses charged above 10%, Meta AI app open."
+
+        val activeSession = newSession
+        if (activeSession == null) {
+            lastError = "Session did not start after $CONNECT_ATTEMPTS tries " +
+                "(last state: ${lastState ?: "none"}). Put the glasses ON and awake, " +
+                "phone Wi-Fi ON. Also confirm the Meta AI app (v282+) and glasses " +
+                "firmware (v126+) meet the toolkit's minimum versions."
             return false
         }
+        session = activeSession
 
         // LOW (360x640) at 15 fps: the sharpest per-frame quality over the
         // Bluetooth link, and plenty for both preview and face recognition.
-        val cam = newSession.addCamera(
+        val cam = activeSession.addCamera(
             StreamConfiguration(videoQuality = VideoQuality.LOW, frameRate = 15)
         ).getOrElse { err -> lastError = "Add camera: $err"; return false }
         camera = cam
@@ -202,9 +216,11 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
     }
 
     private companion object {
-        // First connect can trigger a Wi-Fi install of the DAT app onto the
-        // glasses, which is far slower than a normal session start.
-        const val SESSION_TIMEOUT_MS = 90_000L
+        // Retry a fresh session a few times: the first start often races the
+        // glasses becoming ready and lands in STOPPED.
+        const val CONNECT_ATTEMPTS = 3
+        const val ATTEMPT_TIMEOUT_MS = 30_000L
+        const val RETRY_DELAY_MS = 3_000L
         const val SETUP_TIMEOUT_MS = 30_000L
     }
 }
