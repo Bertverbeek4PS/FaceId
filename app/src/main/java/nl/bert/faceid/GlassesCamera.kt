@@ -108,7 +108,7 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
         // A session started a moment before the glasses are ready just reads
         // STOPPED and never recovers, so retry with a fresh session each time.
         var newSession: DeviceSession? = null
-        var lastState: DeviceSessionState? = null
+        val seen = mutableListOf<DeviceSessionState>()
         var attempt = 0
         while (attempt < CONNECT_ATTEMPTS) {
             attempt++
@@ -117,7 +117,7 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
             s.start()
             val started = withTimeoutOrNull(ATTEMPT_TIMEOUT_MS) {
                 s.state.first { st ->
-                    lastState = st
+                    if (seen.lastOrNull() != st) seen.add(st)
                     st == DeviceSessionState.STARTED
                 }
             }
@@ -131,10 +131,10 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
 
         val activeSession = newSession
         if (activeSession == null) {
-            lastError = "Session did not start after $CONNECT_ATTEMPTS tries " +
-                "(last state: ${lastState ?: "none"}). Put the glasses ON and awake, " +
-                "phone Wi-Fi ON. Also confirm the Meta AI app (v282+) and glasses " +
-                "firmware (v126+) meet the toolkit's minimum versions."
+            val trail = if (seen.isEmpty()) "none" else seen.joinToString(" → ")
+            lastError = "Session never reached STARTED after $CONNECT_ATTEMPTS tries " +
+                "(states: $trail). Wear the glasses and keep them awake; make sure the " +
+                "Meta AI app isn't actively using the camera; only one glasses pair paired."
             return false
         }
         session = activeSession
