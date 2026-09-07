@@ -13,6 +13,8 @@
     <string name="glasses_ready">Bril-camera klaar</string>
     <string name="glasses_failed">Kon geen verbinding maken met de bril. Telefooncamera in gebruik.</string>
     <string name="glasses_off">Telefooncamera in gebruik</string>
+    <string name="glasses_unavailable">Bril-ondersteuning is niet gestart. Telefooncamera in gebruik.</string>
+    <string name="glasses_sdk_error">Bril niet beschikbaar: %1$s</string>
 
     <string name="btn_voice_off">Stem: Uit</string>
     <string name="btn_voice_on">Stem: Aan</string>

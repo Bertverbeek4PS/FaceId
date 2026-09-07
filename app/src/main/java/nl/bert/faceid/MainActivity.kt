@@ -310,6 +310,14 @@ class MainActivity : AppCompatActivity() {
             stopPhoneCamera()
             startGlasses(autoStartVoice = true)
         } else {
+            // The glasses SDK never initialised, so no registration prompt can
+            // ever appear. Tell the user why instead of silently using the phone.
+            val reason = FaceIdApp.initError
+            setStatus(
+                if (reason != null) getString(R.string.glasses_sdk_error, reason)
+                else getString(R.string.glasses_unavailable)
+            )
+            speaker.say(getString(R.string.glasses_unavailable), interrupt = true)
             startCamera()
             startVoiceOrRequest()
         }
@@ -365,8 +373,12 @@ class MainActivity : AppCompatActivity() {
         } else {
             // The glasses SDK never initialised, so there is nothing to connect to.
             if (!FaceIdApp.glassesAvailable) {
-                setStatus(getString(R.string.glasses_failed))
-                speaker.say(getString(R.string.glasses_failed), interrupt = true)
+                val reason = FaceIdApp.initError
+                setStatus(
+                    if (reason != null) getString(R.string.glasses_sdk_error, reason)
+                    else getString(R.string.glasses_unavailable)
+                )
+                speaker.say(getString(R.string.glasses_unavailable), interrupt = true)
                 return
             }
             stopPhoneCamera()

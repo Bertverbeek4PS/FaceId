@@ -20,6 +20,7 @@ class FaceIdApp : Application() {
             glassesAvailable = true
         } catch (t: Throwable) {
             glassesAvailable = false
+            initError = t.message ?: t.javaClass.simpleName
         }
     }
 
@@ -27,6 +28,11 @@ class FaceIdApp : Application() {
         /** True once the Meta Wearables SDK initialised without throwing. */
         @Volatile
         var glassesAvailable: Boolean = false
+            private set
+
+        /** Why SDK init failed, when it did — for surfacing to the user. */
+        @Volatile
+        var initError: String? = null
             private set
     }
 }

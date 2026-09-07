@@ -13,6 +13,8 @@
     <string name="glasses_ready">Glasses camera ready</string>
     <string name="glasses_failed">Could not connect to the glasses. Using the phone camera.</string>
     <string name="glasses_off">Using the phone camera</string>
+    <string name="glasses_unavailable">Glasses support did not start. Using the phone camera.</string>
+    <string name="glasses_sdk_error">Glasses unavailable: %1$s</string>
 
     <string name="btn_voice_off">Voice: Off</string>
     <string name="btn_voice_on">Voice: On</string>
