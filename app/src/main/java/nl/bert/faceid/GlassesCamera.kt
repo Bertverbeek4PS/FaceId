@@ -109,12 +109,14 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
         session = newSession
         newSession.start()
 
-        val started = withTimeoutOrNull(SETUP_TIMEOUT_MS) {
+        val started = withTimeoutOrNull(SESSION_TIMEOUT_MS) {
             newSession.state.first { it == DeviceSessionState.STARTED }
         }
         if (started == null) {
-            lastError = "Session did not start within ${SETUP_TIMEOUT_MS / 1000}s. " +
-                "Put the glasses on, unfold them, and keep them close to the phone."
+            lastError = "Session did not start within ${SESSION_TIMEOUT_MS / 1000}s. " +
+                "On the first connection the Meta AI app installs its glasses app " +
+                "over Wi-Fi, so: turn the phone's Wi-Fi ON, charge the glasses above " +
+                "10%, keep the Meta AI app open, then tap Camera: Glasses again."
             return false
         }
 
@@ -195,6 +197,9 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
     }
 
     private companion object {
+        // First connect can trigger a Wi-Fi install of the DAT app onto the
+        // glasses, which is far slower than a normal session start.
+        const val SESSION_TIMEOUT_MS = 90_000L
         const val SETUP_TIMEOUT_MS = 30_000L
     }
 }
