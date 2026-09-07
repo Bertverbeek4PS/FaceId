@@ -109,14 +109,19 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
         session = newSession
         newSession.start()
 
+        // Record every state we see, so a failure can report where it stalled.
+        var lastState: DeviceSessionState? = null
         val started = withTimeoutOrNull(SESSION_TIMEOUT_MS) {
-            newSession.state.first { it == DeviceSessionState.STARTED }
+            newSession.state.first { st ->
+                lastState = st
+                st == DeviceSessionState.STARTED
+            }
         }
         if (started == null) {
-            lastError = "Session did not start within ${SESSION_TIMEOUT_MS / 1000}s. " +
-                "On the first connection the Meta AI app installs its glasses app " +
-                "over Wi-Fi, so: turn the phone's Wi-Fi ON, charge the glasses above " +
-                "10%, keep the Meta AI app open, then tap Camera: Glasses again."
+            lastError = "Session did not start within ${SESSION_TIMEOUT_MS / 1000}s " +
+                "(last state: ${lastState ?: "none"}). " +
+                "Put the glasses ON and keep them awake — a session needs them worn. " +
+                "Also: phone Wi-Fi ON, glasses charged above 10%, Meta AI app open."
             return false
         }
 
