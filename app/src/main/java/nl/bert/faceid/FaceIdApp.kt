@@ -20,7 +20,11 @@ class FaceIdApp : Application() {
             glassesAvailable = true
         } catch (t: Throwable) {
             glassesAvailable = false
-            initError = t.message ?: t.javaClass.simpleName
+            // Full type + message + stack, so the exact missing class is visible.
+            initError = buildString {
+                append(t.toString())
+                t.cause?.let { append(" | cause: ").append(it) }
+            }
         }
     }
 

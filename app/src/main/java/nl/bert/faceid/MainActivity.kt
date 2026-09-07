@@ -379,6 +379,7 @@ class MainActivity : AppCompatActivity() {
                     else getString(R.string.glasses_unavailable)
                 )
                 speaker.say(getString(R.string.glasses_unavailable), interrupt = true)
+                if (reason != null) showSdkErrorDialog(reason)
                 return
             }
             stopPhoneCamera()
@@ -796,6 +797,21 @@ class MainActivity : AppCompatActivity() {
             .setNeutralButton(R.string.name_again) { _, _ -> askForName() }
             .setNegativeButton(R.string.name_type) { _, _ -> promptTypedName() }
             .setOnCancelListener { recycleCaptured() }
+            .show()
+    }
+
+    private fun showSdkErrorDialog(reason: String) {
+        val view = EditText(this).apply {
+            setText(reason)
+            keyListener = null
+            textSize = 13f
+            setTextColor(ContextCompat.getColor(context, R.color.amber))
+            setPadding(48, 32, 48, 32)
+        }
+        AlertDialog.Builder(this, R.style.DarkDialog)
+            .setTitle(R.string.glasses_error_title)
+            .setView(view)
+            .setPositiveButton(R.string.btn_ok, null)
             .show()
     }
 

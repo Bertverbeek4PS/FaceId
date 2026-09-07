@@ -50,6 +50,8 @@
     <string name="btn_add">Persoon toevoegen</string>
     <string name="btn_people">Personen beheren</string>
     <string name="btn_cancel">Annuleren</string>
+    <string name="btn_ok">OK</string>
+    <string name="glasses_error_title">Details bril-fout</string>
 
     <string name="enroll_hold">Richt op het gezicht en maak 5 foto&#8217;s</string>
     <string name="enroll_photo">Foto %1$d van %2$d</string>
