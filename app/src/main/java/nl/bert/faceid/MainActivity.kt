@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.text.InputType
@@ -140,6 +141,18 @@ class MainActivity : AppCompatActivity() {
     /** Set by the shutter button; the next frame with a usable face is kept. */
     @Volatile
     private var captureRequested = false
+
+    private val requestBluetooth = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions.values.all { it }) {
+            startGlasses(pendingAutoStartVoice)
+        } else {
+            glassesFailed(pendingAutoStartVoice)
+        }
+    }
+
+    private var pendingAutoStartVoice = false
 
     private val requestCamera = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -361,6 +374,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun hasBluetoothPermissions(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val connect = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.BLUETOOTH_CONNECT
+        ) == PackageManager.PERMISSION_GRANTED
+        val scan = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.BLUETOOTH_SCAN
+        ) == PackageManager.PERMISSION_GRANTED
+        return connect && scan
+    }
+
+    private fun requestBluetoothPermissions(autoStartVoice: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            pendingAutoStartVoice = autoStartVoice
+            requestBluetooth.launch(
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_SCAN
+                )
+            )
+        }
+    }
+
     /**
      * Brings the glasses online: registers with the Meta AI app if needed, gets
      * the camera permission it brokers, then opens a session and stream. Each
@@ -368,6 +404,11 @@ class MainActivity : AppCompatActivity() {
      * that falls back to the phone camera on any failure.
      */
     private fun startGlasses(autoStartVoice: Boolean = false) {
+        if (!hasBluetoothPermissions()) {
+            requestBluetoothPermissions(autoStartVoice)
+            return
+        }
+
         binding.btnCamera.isEnabled = false
         setStatus(getString(R.string.glasses_connecting))
         speaker.say(getString(R.string.glasses_connecting), interrupt = true)
