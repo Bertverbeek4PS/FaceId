@@ -89,6 +89,10 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
+    // Explicit so the full stdlib (SpillingKt et al.) and coroutines runtime the
+    // Meta SDK's compiled suspend functions reference are guaranteed in the APK.
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     val cameraX = "1.3.4"
@@ -105,4 +109,14 @@ dependencies {
     val mwdat = "0.9.0"
     implementation("com.meta.wearable:mwdat-core:$mwdat")
     implementation("com.meta.wearable:mwdat-camera:$mwdat")
+}
+
+// A transitive dependency must never drag kotlin-stdlib or coroutines below the
+// versions above, or SpillingKt / other stdlib coroutine internals go missing.
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    }
 }
