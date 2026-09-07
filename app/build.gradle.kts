@@ -59,6 +59,16 @@ android {
         release {
             isMinifyEnabled = false
         }
+        // R8 in pass-through mode: forces a whole-program dex so the Meta SDK's
+        // reference to kotlin.coroutines.jvm.internal.SpillingKt keeps that class,
+        // which per-library dexing otherwise strips. Nothing is shrunk or renamed.
+        debug {
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android.txt"),
+                "proguard-rules.pro"
+            )
+        }
     }
 
     compileOptions {
