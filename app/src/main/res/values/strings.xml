@@ -15,6 +15,8 @@
     <string name="glasses_off">Using the phone camera</string>
     <string name="glasses_unavailable">Glasses support did not start. Using the phone camera.</string>
     <string name="glasses_sdk_error">Glasses unavailable: %1$s</string>
+    <string name="glasses_reg_timeout">Registration with the Meta AI app timed out or was cancelled.</string>
+    <string name="glasses_no_camera_perm">The glasses camera permission was not granted in the Meta AI app.</string>
 
     <string name="btn_voice_off">Voice: Off</string>
     <string name="btn_voice_on">Voice: On</string>

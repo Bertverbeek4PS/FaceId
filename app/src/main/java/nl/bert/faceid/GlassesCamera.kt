@@ -61,6 +61,9 @@ interface GlassesCamera {
     /** True once a session and stream with the glasses are open. */
     val connected: Boolean
 
+    /** Why the last connect() attempt failed, when it did. */
+    val lastError: String?
+
     suspend fun connect(): Boolean
 
     /** Requests one photo. The decoded frame arrives on the registered listener. */
@@ -93,31 +96,43 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
     override var connected: Boolean = false
         private set
 
+    @Volatile
+    override var lastError: String? = null
+        private set
+
     override suspend fun connect(): Boolean {
         disconnect()
+        lastError = null
 
         val newSession = Wearables.createSession(AutoDeviceSelector())
-            .getOrElse { return false }
+            .getOrElse { err -> lastError = "Create session: ${err.description}"; return false }
         session = newSession
         newSession.start()
 
         val started = withTimeoutOrNull(SETUP_TIMEOUT_MS) {
             newSession.state.first { it == DeviceSessionState.STARTED }
         }
-        if (started == null) return false
+        if (started == null) {
+            lastError = "Session did not start within ${SETUP_TIMEOUT_MS / 1000}s. " +
+                "Put the glasses on, unfold them, and keep them close to the phone."
+            return false
+        }
 
         // LOW (360x640) at 15 fps: the sharpest per-frame quality over the
         // Bluetooth link, and plenty for both preview and face recognition.
         val cam = newSession.addCamera(
             StreamConfiguration(videoQuality = VideoQuality.LOW, frameRate = 15)
-        ).getOrElse { return false }
+        ).getOrElse { err -> lastError = "Add camera: ${err.description}"; return false }
         camera = cam
 
-        cam.stream.start().getOrElse { return false }
+        cam.stream.start().getOrElse { err -> lastError = "Start stream: ${err.description}"; return false }
         val streaming = withTimeoutOrNull(SETUP_TIMEOUT_MS) {
             cam.stream.state.first { it == StreamState.STREAMING }
         }
-        if (streaming == null) return false
+        if (streaming == null) {
+            lastError = "Camera stream did not reach STREAMING within ${SETUP_TIMEOUT_MS / 1000}s."
+            return false
+        }
 
         connected = true
         startPreview(cam.stream)

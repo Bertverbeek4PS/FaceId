@@ -433,18 +433,18 @@ class MainActivity : AppCompatActivity() {
                     Wearables.registrationState.first { it == RegistrationState.REGISTERED }
                 }
                 if (registered == null) {
-                    glassesFailed(autoStartVoice)
+                    glassesFailed(autoStartVoice, getString(R.string.glasses_reg_timeout))
                     return@launch
                 }
             }
 
             if (!ensureGlassesCameraPermission()) {
-                glassesFailed(autoStartVoice)
+                glassesFailed(autoStartVoice, getString(R.string.glasses_no_camera_perm))
                 return@launch
             }
 
             if (!glasses.connect()) {
-                glassesFailed(autoStartVoice)
+                glassesFailed(autoStartVoice, glasses.lastError)
                 return@launch
             }
 
@@ -459,13 +459,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun glassesFailed(autoStartVoice: Boolean = false) {
+    private fun glassesFailed(autoStartVoice: Boolean = false, reason: String? = null) {
         useGlasses = false
         binding.btnCamera.isEnabled = true
         clearGlassesPreview()
         refreshCameraButton()
-        setStatus(getString(R.string.glasses_failed))
+        setStatus(
+            if (reason != null) getString(R.string.glasses_sdk_error, reason)
+            else getString(R.string.glasses_failed)
+        )
         speaker.say(getString(R.string.glasses_failed), interrupt = true)
+        if (reason != null) showSdkErrorDialog(reason)
         startCamera()
         if (autoStartVoice) startVoiceOrRequest()
     }

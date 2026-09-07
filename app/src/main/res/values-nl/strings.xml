@@ -15,6 +15,8 @@
     <string name="glasses_off">Telefooncamera in gebruik</string>
     <string name="glasses_unavailable">Bril-ondersteuning is niet gestart. Telefooncamera in gebruik.</string>
     <string name="glasses_sdk_error">Bril niet beschikbaar: %1$s</string>
+    <string name="glasses_reg_timeout">Registratie met de Meta AI-app is verlopen of geannuleerd.</string>
+    <string name="glasses_no_camera_perm">De cameratoestemming voor de bril is niet verleend in de Meta AI-app.</string>
 
     <string name="btn_voice_off">Stem: Uit</string>
     <string name="btn_voice_on">Stem: Aan</string>
