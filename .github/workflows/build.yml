@@ -51,6 +51,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
+          # Avoid restoring a stale dexed kotlin-stdlib from a previous run.
+          cache-disabled: true
 
       - name: Check DAT credentials are present
         env:
@@ -84,7 +86,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.MWDAT_GITHUB_TOKEN }}
           MWDAT_APPLICATION_ID: ${{ secrets.MWDAT_APPLICATION_ID }}
           MWDAT_CLIENT_TOKEN: ${{ secrets.MWDAT_CLIENT_TOKEN }}
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: gradle clean assembleDebug --no-daemon --no-build-cache --stacktrace
 
       # Download from the run's Artifacts section (arrives as a zip).
       - name: Show signing key fingerprint
