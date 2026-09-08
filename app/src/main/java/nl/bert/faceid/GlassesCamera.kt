@@ -1,13 +1,12 @@
 package nl.bert.faceid
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import com.meta.wearable.dat.camera.Camera
 import com.meta.wearable.dat.camera.Stream
 import com.meta.wearable.dat.camera.addCamera
-import com.meta.wearable.dat.camera.types.PhotoData
 import com.meta.wearable.dat.camera.types.StreamConfiguration
 import com.meta.wearable.dat.camera.types.StreamState
+import com.meta.wearable.dat.camera.types.VideoCodec
 import com.meta.wearable.dat.camera.types.VideoFrame
 import com.meta.wearable.dat.camera.types.VideoQuality
 import com.meta.wearable.dat.core.Wearables
@@ -37,13 +36,15 @@ import kotlinx.coroutines.withTimeoutOrNull
  * HOW IT WORKS
  *   - Registration and the camera permission are brokered by the Meta AI app and
  *     handled in MainActivity (they need an Activity and the Activity Result API).
- *   - connect() opens a device session and a low-resolution raw stream. A stream
- *     must be live for photo capture to work at all.
+ *   - connect() opens a device session and a low-resolution RAW stream. RAW is
+ *     essential: without it the link delivers compressed (HEVC) frames, which the
+ *     preview drops, leaving the phone screen blank.
  *   - The raw video frames feed a live preview (setPreviewListener). They arrive
  *     as uncompressed RGBA, so each one is a straight copy into a Bitmap — no HEVC
  *     decoder needed.
- *   - capture() takes a single sharper still for recognition and hands the decoded
- *     Bitmap to the frame listener.
+ *   - capture() serves the most recent raw frame to the recognition pipeline.
+ *     capturePhoto() shares the same constrained Bluetooth link and returned
+ *     nothing in practice, so recognition reuses the live stream instead.
  *
  * NOTE: the toolkit is a developer preview, so a few symbol or package names may
  * shift between versions. If a name does not resolve, let Android Studio auto-import
@@ -67,7 +68,7 @@ interface GlassesCamera {
 
     suspend fun connect(): Boolean
 
-    /** Requests one photo. The decoded frame arrives on the registered listener. */
+    /** Serves the latest live frame to the registered frame listener. */
     suspend fun capture()
 
     fun setFrameListener(listener: FrameListener)
@@ -92,6 +93,11 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
     private var session: DeviceSession? = null
     private var camera: Camera? = null
     private var previewJob: Job? = null
+
+    /** The most recent raw frame, kept so capture() can serve recognition
+     *  from the live stream instead of a separate, flaky capturePhoto call. */
+    private val frameLock = Any()
+    private var latestFrame: Bitmap? = null
 
     @Volatile
     override var connected: Boolean = false
@@ -141,8 +147,14 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
 
         // LOW (360x640) at 15 fps: the sharpest per-frame quality over the
         // Bluetooth link, and plenty for both preview and face recognition.
+        // RAW is required: without it the link delivers compressed (HEVC) frames,
+        // which the preview collector drops — leaving the phone screen blank.
         val cam = activeSession.addCamera(
-            StreamConfiguration(videoQuality = VideoQuality.LOW, frameRate = 15)
+            StreamConfiguration(
+                videoCodec = VideoCodec.RAW,
+                videoQuality = VideoQuality.LOW,
+                frameRate = 15
+            )
         ).getOrElse { err -> lastError = "Add camera: $err"; return false }
         camera = cam
 
@@ -160,21 +172,16 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
         return true
     }
 
+    /**
+     * Hands the recognition pipeline the latest live frame. capturePhoto() shares
+     * the same constrained Bluetooth link as the stream and was returning nothing,
+     * so recognition is served from the raw stream that already feeds the preview.
+     */
     override suspend fun capture() {
-        val cam = camera ?: return
-        cam.stream.capturePhoto().onSuccess { photo ->
-            // PhotoData is either a ready Bitmap or HEIC bytes to decode.
-            val bitmap = when (photo) {
-                is PhotoData.Bitmap -> photo.bitmap
-                is PhotoData.HEIC -> {
-                    val buffer = photo.data.duplicate().apply { rewind() }
-                    val bytes = ByteArray(buffer.remaining())
-                    buffer.get(bytes)
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                }
-            }
-            if (bitmap != null) listener?.onFrame(bitmap)
-        }
+        val snapshot = synchronized(frameLock) {
+            latestFrame?.copy(Bitmap.Config.ARGB_8888, false)
+        } ?: return
+        listener?.onFrame(snapshot)
     }
 
     override fun setFrameListener(listener: GlassesCamera.FrameListener) {
@@ -193,6 +200,10 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
         session?.stop()
         camera = null
         session = null
+        synchronized(frameLock) {
+            latestFrame?.recycle()
+            latestFrame = null
+        }
     }
 
     private fun startPreview(stream: Stream) {
@@ -200,7 +211,13 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
         previewJob = scope.launch {
             stream.videoStream.collect { frame ->
                 if (frame.isCompressed) return@collect
-                frame.toBitmap()?.let { previewListener?.onPreview(it) }
+                val bitmap = frame.toBitmap() ?: return@collect
+                // Retain a copy for on-demand capture; the preview takes the original.
+                synchronized(frameLock) {
+                    latestFrame?.recycle()
+                    latestFrame = bitmap.copy(Bitmap.Config.ARGB_8888, false)
+                }
+                previewListener?.onPreview(bitmap)
             }
         }
     }

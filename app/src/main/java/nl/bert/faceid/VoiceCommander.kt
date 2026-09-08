@@ -43,6 +43,9 @@ class VoiceCommander(
     var listening = false
         private set
 
+    /** True while the media stream is muted to hide the recognizer start tone. */
+    private var muted = false
+
     val isSupported: Boolean get() = SpeechRecognizer.isRecognitionAvailable(context)
 
     val hasMicPermission: Boolean
@@ -65,6 +68,7 @@ class VoiceCommander(
     fun stop() {
         listening = false
         handler.removeCallbacksAndMessages(null)
+        unmuteBeep()
         recognizer?.destroy()
         recognizer = null
         stopGlassesMicRoute()
@@ -84,8 +88,14 @@ class VoiceCommander(
             }
             try {
                 recognizer?.cancel()
+                // The recognizer plays a start tone every cycle; since this loops
+                // continuously that becomes a constant beep. Mute the media stream
+                // for just the tone window, then restore it.
+                muteBeep()
                 recognizer?.startListening(intent)
+                handler.postDelayed({ unmuteBeep() }, BEEP_MUTE_MS)
             } catch (e: Exception) {
+                unmuteBeep()
                 scheduleListen(RETRY_MS)
             }
         }, delayMs)
@@ -124,6 +134,20 @@ class VoiceCommander(
         am.mode = AudioManager.MODE_NORMAL
     }
 
+    private fun muteBeep() {
+        val am = audioManager ?: return
+        if (muted) return
+        muted = true
+        am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, 0)
+    }
+
+    private fun unmuteBeep() {
+        val am = audioManager ?: return
+        if (!muted) return
+        muted = false
+        am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0)
+    }
+
     private val listener = object : RecognitionListener {
         override fun onResults(results: Bundle?) {
             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
@@ -145,5 +169,9 @@ class VoiceCommander(
     private companion object {
         // Backoff after an error so a persistent failure can't hot-loop the recognizer.
         const val RETRY_MS = 600L
+
+        // Long enough to cover the recognizer's start tone, short enough that
+        // spoken names are not clipped.
+        const val BEEP_MUTE_MS = 300L
     }
 }

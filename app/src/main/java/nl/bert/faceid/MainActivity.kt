@@ -1015,7 +1015,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resetRecognitionStateIfAbsent() {
-        if (System.currentTimeMillis() - lastFaceSeenAt >= FACE_ABSENCE_RESET_MS) {
+        // Guard on a real last-seen time: once reset zeroes it, this must stop
+        // firing, or it clears the announce cooldown on every frame and the
+        // "no face" line stutters.
+        if (lastFaceSeenAt != 0L &&
+            System.currentTimeMillis() - lastFaceSeenAt >= FACE_ABSENCE_RESET_MS
+        ) {
             resetRecognitionState()
         }
     }
