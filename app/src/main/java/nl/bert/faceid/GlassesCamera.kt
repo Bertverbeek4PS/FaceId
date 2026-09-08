@@ -6,7 +6,6 @@ import com.meta.wearable.dat.camera.Stream
 import com.meta.wearable.dat.camera.addCamera
 import com.meta.wearable.dat.camera.types.StreamConfiguration
 import com.meta.wearable.dat.camera.types.StreamState
-import com.meta.wearable.dat.camera.types.VideoCodec
 import com.meta.wearable.dat.camera.types.VideoFrame
 import com.meta.wearable.dat.camera.types.VideoQuality
 import com.meta.wearable.dat.core.Wearables
@@ -151,7 +150,6 @@ class MetaGlassesCamera(private val scope: CoroutineScope) : GlassesCamera {
         // which the preview collector drops — leaving the phone screen blank.
         val cam = activeSession.addCamera(
             StreamConfiguration(
-                videoCodec = VideoCodec.RAW,
                 videoQuality = VideoQuality.LOW,
                 frameRate = 15
             )
