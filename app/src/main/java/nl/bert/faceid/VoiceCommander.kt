@@ -43,7 +43,7 @@ class VoiceCommander(
     var listening = false
         private set
 
-    /** True while the media stream is muted to hide the recognizer start tone. */
+    /** True while the call audio stream is muted to hide the recognizer start tone. */
     private var muted = false
 
     val isSupported: Boolean get() = SpeechRecognizer.isRecognitionAvailable(context)
@@ -89,8 +89,8 @@ class VoiceCommander(
             try {
                 recognizer?.cancel()
                 // The recognizer plays a start tone every cycle; since this loops
-                // continuously that becomes a constant beep. Mute the media stream
-                // for just the tone window, then restore it.
+                // continuously that becomes a constant beep. Mute the Bluetooth call
+                // stream for the tone window, then restore it.
                 muteBeep()
                 recognizer?.startListening(intent)
                 handler.postDelayed({ unmuteBeep() }, BEEP_MUTE_MS)
@@ -138,14 +138,24 @@ class VoiceCommander(
         val am = audioManager ?: return
         if (muted) return
         muted = true
-        am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, 0)
+        muteStream(am, AudioManager.STREAM_VOICE_CALL)
+        muteStream(am, AudioManager.STREAM_MUSIC)
     }
 
     private fun unmuteBeep() {
         val am = audioManager ?: return
         if (!muted) return
         muted = false
-        am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0)
+        unmuteStream(am, AudioManager.STREAM_VOICE_CALL)
+        unmuteStream(am, AudioManager.STREAM_MUSIC)
+    }
+
+    private fun muteStream(am: AudioManager, stream: Int) {
+        am.adjustStreamVolume(stream, AudioManager.ADJUST_MUTE, 0)
+    }
+
+    private fun unmuteStream(am: AudioManager, stream: Int) {
+        am.adjustStreamVolume(stream, AudioManager.ADJUST_UNMUTE, 0)
     }
 
     private val listener = object : RecognitionListener {
@@ -170,8 +180,8 @@ class VoiceCommander(
         // Backoff after an error so a persistent failure can't hot-loop the recognizer.
         const val RETRY_MS = 600L
 
-        // Long enough to cover the recognizer's start tone, short enough that
-        // spoken names are not clipped.
-        const val BEEP_MUTE_MS = 300L
+        // Long enough to cover the recognizer's start tone without clipping the
+        // spoken name prompt; the HFP tone is a little longer than a simple media beep.
+        const val BEEP_MUTE_MS = 600L
     }
 }
