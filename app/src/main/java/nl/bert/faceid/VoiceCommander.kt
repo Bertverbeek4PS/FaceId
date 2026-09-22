@@ -43,7 +43,7 @@ class VoiceCommander(
     var listening = false
         private set
 
-    /** True while the call audio stream is muted to hide the recognizer start tone. */
+    /** True while the relevant audio streams are muted to hide the recognizer start tone. */
     private var muted = false
 
     val isSupported: Boolean get() = SpeechRecognizer.isRecognitionAvailable(context)
@@ -88,9 +88,9 @@ class VoiceCommander(
             }
             try {
                 recognizer?.cancel()
-                // The recognizer plays a start tone every cycle; since this loops
-                // continuously that becomes a constant beep. Mute the Bluetooth call
-                // stream for the tone window, then restore it.
+                // The recognizer beep is generated on the system/notification audio
+                // paths and still leaks through the Bluetooth HFP route. Cover all of
+                // those streams during the tone window, then restore them.
                 muteBeep()
                 recognizer?.startListening(intent)
                 handler.postDelayed({ unmuteBeep() }, BEEP_MUTE_MS)
@@ -138,16 +138,28 @@ class VoiceCommander(
         val am = audioManager ?: return
         if (muted) return
         muted = true
-        muteStream(am, AudioManager.STREAM_VOICE_CALL)
-        muteStream(am, AudioManager.STREAM_MUSIC)
+        for (stream in listOf(
+            AudioManager.STREAM_VOICE_CALL,
+            AudioManager.STREAM_MUSIC,
+            AudioManager.STREAM_NOTIFICATION,
+            AudioManager.STREAM_SYSTEM,
+        )) {
+            muteStream(am, stream)
+        }
     }
 
     private fun unmuteBeep() {
         val am = audioManager ?: return
         if (!muted) return
         muted = false
-        unmuteStream(am, AudioManager.STREAM_VOICE_CALL)
-        unmuteStream(am, AudioManager.STREAM_MUSIC)
+        for (stream in listOf(
+            AudioManager.STREAM_VOICE_CALL,
+            AudioManager.STREAM_MUSIC,
+            AudioManager.STREAM_NOTIFICATION,
+            AudioManager.STREAM_SYSTEM,
+        )) {
+            unmuteStream(am, stream)
+        }
     }
 
     private fun muteStream(am: AudioManager, stream: Int) {
@@ -181,7 +193,7 @@ class VoiceCommander(
         const val RETRY_MS = 600L
 
         // Long enough to cover the recognizer's start tone without clipping the
-        // spoken name prompt; the HFP tone is a little longer than a simple media beep.
-        const val BEEP_MUTE_MS = 600L
+        // spoken name prompt; the Bluetooth HFP beep is a little longer than a media beep.
+        const val BEEP_MUTE_MS = 1200L
     }
 }
